@@ -8,6 +8,9 @@
 _site/
 docs/
 
+# additional local resources
+_resources/
+
 # OS specific
 .DS_Store
 Thumbs.db
