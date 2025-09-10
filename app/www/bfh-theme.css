@@ -1,0 +1,838 @@
+/* BFH Corporate Design Theme for Shiny Apps */
+/* Based on BFH Markenmanual for digital media */
+
+/* ============================================ */
+/* CSS Variables (Custom Properties) */
+/* ============================================ */
+
+:root {
+  /* BFH Core Color Palette */
+  --bfh-dunkelblau: rgb(80, 110, 150);
+  --bfh-dunkelgruen: rgb(85, 100, 85);
+  --bfh-dunkelviolett: rgb(100, 80, 120);
+  --bfh-dunkelocker: rgb(120, 100, 80);
+  --bfh-mittelgruen: rgb(105, 150, 115);
+  --bfh-mittelblau: rgb(105, 155, 190);
+  --bfh-mittelviolett: rgb(130, 90, 125);
+  --bfh-mittelocker: rgb(150, 130, 95);
+  --bfh-hellgruen: rgb(140, 175, 130);
+  --bfh-hellblau: rgb(135, 185, 200);
+  
+  /* BFH Online Colors (WCAG-optimized) */
+  --bfh-orange: #fac300;
+  --bfh-grau: #697d91;
+  --bfh-text-grau: #4b647d;
+  --bfh-dunkelgrau: #3c3c3c;
+  
+  /* BFH Grayscale Series */
+  --bfh-grauwert-1: #64788b;
+  --bfh-grauwert-2: #a2aeb9;
+  --bfh-grauwert-3: #c1c9d1;
+  --bfh-grauwert-4: #e0e4e8;
+  --bfh-grauwert-5: #eff1f3;
+  
+  /* Semantic Color Assignments */
+  --brand-primary: var(--bfh-dunkelblau);
+  --brand-secondary: var(--bfh-orange);
+  --text-primary: var(--bfh-text-grau);
+  --text-muted: var(--bfh-grau);
+  --background-light: #ffffff;
+  --background-neutral: var(--bfh-grauwert-5);
+  --border-color: var(--bfh-grauwert-3);
+  
+  /* Typography */
+  --font-family-primary: "Lucida Sans", "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+  --font-family-serif: Georgia, "Times New Roman", Times, serif;
+  
+  /* Spacing (consistent 20px base) */
+  --spacing-xs: 5px;
+  --spacing-sm: 10px;
+  --spacing-md: 20px;
+  --spacing-lg: 40px;
+  --spacing-xl: 60px;
+  
+  /* Component Sizes */
+  --border-radius: 4px;
+  --border-radius-lg: 8px;
+  --button-padding: 12px 24px;
+  --input-padding: 10px 15px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* ============================================ */
+/* BFH Logo and Header Styling */
+/* ============================================ */
+
+.bfh-header-with-logo {
+  border-bottom: 3px solid var(--brand-secondary);
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg) !important;
+}
+
+.bfh-logo-container {
+  flex-shrink: 0;
+}
+
+.bfh-logo {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  transition: transform 0.2s ease;
+}
+
+.bfh-logo:hover {
+  transform: scale(1.02);
+}
+
+.bfh-header-text h1 {
+  color: var(--brand-primary);
+  font-size: 2.2rem;
+  font-weight: 600;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0 !important;
+}
+
+.bfh-header-text .text-muted {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Tablet optimizations */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .bfh-header-text h1 {
+    font-size: 2rem;
+  }
+  
+  .bfh-logo {
+    height: 55px;
+  }
+  
+  .container-fluid {
+    padding: var(--spacing-md);
+  }
+  
+  /* Better spacing for tablet touch */
+  .btn {
+    padding: 14px 28px;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+  
+  /* Larger input fields for tablet */
+  .form-control, .selectize-input {
+    padding: 12px 16px;
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .bfh-header-with-logo {
+    flex-direction: column;
+    align-items: flex-start !important;
+    text-align: center;
+  }
+  
+  .bfh-logo-container {
+    align-self: center;
+    margin-bottom: var(--spacing-sm);
+    margin-right: 0 !important;
+  }
+  
+  .bfh-logo {
+    height: 50px !important;
+  }
+  
+  .bfh-header-text {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .bfh-header-text h1 {
+    font-size: 1.8rem;
+  }
+  
+  /* Touch-friendly interactions */
+  .btn {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+    min-height: 48px;
+    margin: 8px 0;
+  }
+  
+  /* Larger form controls for touch */
+  .form-control, .selectize-input {
+    padding: 14px 18px;
+    font-size: 16px;
+    min-height: 48px;
+    border-radius: 8px;
+  }
+  
+  /* Better checkbox/radio button sizing */
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin: 8px;
+  }
+  
+  /* Larger slider handles */
+  .irs--shiny .irs-handle {
+    width: 30px;
+    height: 30px;
+    top: -8px;
+  }
+  
+  /* Better table readability */
+  .table td, .table th {
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+}
+
+/* ============================================ */
+/* Base Typography and Layout */
+/* ============================================ */
+
+body {
+  font-family: var(--font-family-primary);
+  color: var(--text-primary);
+  background-color: var(--background-light);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+.container-fluid {
+  padding: var(--spacing-md);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--brand-primary);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-md);
+  border-bottom: 3px solid var(--brand-secondary);
+  padding-bottom: var(--spacing-sm);
+}
+
+h2 {
+  font-size: 2rem;
+  margin-top: var(--spacing-lg);
+  color: var(--bfh-dunkelblau);
+}
+
+h3 {
+  font-size: 1.5rem;
+  color: var(--bfh-mittelblau);
+}
+
+h4 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+/* Paragraphs and Text */
+p {
+  margin-bottom: var(--spacing-md);
+  line-height: 1.7;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-small {
+  font-size: 0.9rem;
+}
+
+/* ============================================ */
+/* BFH Panel and Card Components */
+/* ============================================ */
+
+.bfh-panel {
+  background: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  box-shadow: var(--shadow-sm);
+}
+
+.bfh-panel-header {
+  background: linear-gradient(135deg, var(--brand-primary), var(--bfh-mittelblau));
+  color: white;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  margin: calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md)) var(--spacing-md) calc(-1 * var(--spacing-md));
+  font-weight: 600;
+}
+
+.bfh-card {
+  background: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  transition: box-shadow 0.3s ease;
+}
+
+.bfh-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.bfh-card-highlight {
+  border-left: 4px solid var(--brand-secondary);
+  background: linear-gradient(to right, rgba(250, 195, 0, 0.05), transparent);
+}
+
+/* ============================================ */
+/* Form Controls and Inputs */
+/* ============================================ */
+
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-control, .selectize-input {
+  font-family: var(--font-family-primary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--input-padding);
+  font-size: 14px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus, .selectize-input.focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(80, 110, 150, 0.1);
+  outline: none;
+}
+
+/* Shiny Slider Inputs */
+.irs--shiny .irs-bar {
+  background: linear-gradient(to right, var(--brand-primary), var(--bfh-mittelblau));
+}
+
+.irs--shiny .irs-handle {
+  background: var(--brand-secondary);
+  border: 2px solid var(--brand-primary);
+}
+
+.irs--shiny .irs-handle:hover {
+  background: var(--brand-primary);
+}
+
+.irs--shiny .irs-single, .irs--shiny .irs-from, .irs--shiny .irs-to {
+  background: var(--brand-primary);
+  color: white;
+}
+
+/* Select inputs */
+.selectize-dropdown {
+  border: 2px solid var(--brand-primary);
+  border-radius: var(--border-radius);
+}
+
+.selectize-dropdown .option:hover {
+  background: var(--bfh-grauwert-5);
+  color: var(--text-primary);
+}
+
+/* ============================================ */
+/* Buttons */
+/* ============================================ */
+
+.btn {
+  font-family: var(--font-family-primary);
+  padding: var(--button-padding);
+  border-radius: var(--border-radius);
+  border: none;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand-primary), var(--bfh-mittelblau));
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--bfh-mittelblau), var(--brand-primary));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: var(--brand-secondary);
+  color: var(--bfh-dunkelgrau);
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: #e6b000;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--brand-primary);
+  border: 2px solid var(--brand-primary);
+}
+
+.btn-outline-primary:hover {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.btn-success {
+  background: var(--bfh-mittelgruen);
+  color: white;
+}
+
+.btn-success:hover {
+  background: var(--bfh-dunkelgruen);
+}
+
+.btn-info {
+  background: var(--bfh-hellblau);
+  color: var(--text-primary);
+}
+
+.btn-info:hover {
+  background: var(--bfh-mittelblau);
+  color: white;
+}
+
+/* ============================================ */
+/* Tables */
+/* ============================================ */
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+}
+
+.table th {
+  background: linear-gradient(135deg, var(--brand-primary), var(--bfh-mittelblau));
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+}
+
+.table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+  background: var(--bfh-grauwert-5);
+}
+
+/* DataTables styling */
+.dataTables_wrapper {
+  font-family: var(--font-family-primary);
+}
+
+.dataTables_filter input {
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+/* ============================================ */
+/* Plots and Visualizations */
+/* ============================================ */
+
+.bfh-plot-container {
+  background: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Responsive plot container */
+.responsive-plot {
+  width: 100%;
+  height: 45vh;
+  min-height: 400px;
+  max-height: 500px;
+}
+
+.responsive-plot .html-widget {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Large desktop screens - optimal proportions */
+@media (min-width: 1440px) {
+  .responsive-plot {
+    height: 50vh;
+    min-height: 450px;
+    max-height: 550px;
+  }
+}
+
+/* Standard desktop screens - balanced proportions */
+@media (min-width: 1025px) and (max-width: 1439px) {
+  .responsive-plot {
+    height: 45vh;
+    min-height: 400px;
+    max-height: 500px;
+  }
+}
+
+/* Tablet screens - moderate space */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .responsive-plot {
+    height: 50vh;
+    min-height: 350px;
+    max-height: 500px;
+  }
+}
+
+/* Mobile screens - compact space */
+@media (max-width: 768px) {
+  .responsive-plot {
+    height: 45vh;
+    min-height: 300px;
+    max-height: 400px;
+    padding: var(--spacing-sm);
+  }
+  
+  /* Smaller plot container padding on mobile */
+  .bfh-plot-container {
+    padding: var(--spacing-sm);
+    margin: var(--spacing-sm) 0;
+  }
+}
+
+.plotly .modebar {
+  background: var(--background-neutral) !important;
+  border-radius: var(--border-radius);
+}
+
+/* ============================================ */
+/* Navigation and Tabs */
+/* ============================================ */
+
+.nav-tabs {
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: var(--spacing-md);
+}
+
+.nav-tabs .nav-link {
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: -2px;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--brand-primary);
+  border-bottom-color: var(--brand-secondary);
+  background: none;
+  font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+  border-bottom-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+/* ============================================ */
+/* Progress Indicators */
+/* ============================================ */
+
+.progress {
+  background: var(--bfh-grauwert-4);
+  border-radius: var(--border-radius);
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(to right, var(--brand-primary), var(--bfh-mittelblau));
+  transition: width 0.6s ease;
+}
+
+/* ============================================ */
+/* Alerts and Messages */
+/* ============================================ */
+
+.alert {
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border-left: 4px solid;
+}
+
+.alert-info {
+  background: rgba(135, 185, 200, 0.1);
+  border-left-color: var(--bfh-hellblau);
+  color: var(--text-primary);
+}
+
+.alert-success {
+  background: rgba(105, 150, 115, 0.1);
+  border-left-color: var(--bfh-mittelgruen);
+  color: var(--text-primary);
+}
+
+.alert-warning {
+  background: rgba(250, 195, 0, 0.1);
+  border-left-color: var(--brand-secondary);
+  color: var(--text-primary);
+}
+
+.alert-danger {
+  background: rgba(120, 100, 80, 0.1);
+  border-left-color: var(--bfh-dunkelocker);
+  color: var(--text-primary);
+}
+
+/* ============================================ */
+/* Layout Utilities */
+/* ============================================ */
+
+.row {
+  margin: 0 calc(-1 * var(--spacing-sm));
+}
+
+.col, .col-md-6, .col-md-4, .col-md-8, .col-md-3, .col-md-9 {
+  padding: 0 var(--spacing-sm);
+}
+
+.mb-3 {
+  margin-bottom: var(--spacing-md) !important;
+}
+
+.mt-3 {
+  margin-top: var(--spacing-md) !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* ============================================ */
+/* Responsive Design */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: var(--spacing-sm);
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  .btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9rem;
+  }
+  
+  .bfh-panel {
+    padding: var(--spacing-sm);
+  }
+}
+
+/* ============================================ */
+/* Chart Color Palette for Statistical Apps */
+/* ============================================ */
+
+.bfh-color-1 { color: var(--bfh-dunkelblau); }
+.bfh-color-2 { color: var(--bfh-mittelgruen); }
+.bfh-color-3 { color: var(--bfh-dunkelviolett); }
+.bfh-color-4 { color: var(--bfh-dunkelocker); }
+.bfh-color-5 { color: var(--bfh-hellblau); }
+.bfh-color-6 { color: var(--bfh-hellgruen); }
+
+.bfh-bg-1 { background-color: var(--bfh-dunkelblau); }
+.bfh-bg-2 { background-color: var(--bfh-mittelgruen); }
+.bfh-bg-3 { background-color: var(--bfh-dunkelviolett); }
+.bfh-bg-4 { background-color: var(--bfh-dunkelocker); }
+.bfh-bg-5 { background-color: var(--bfh-hellblau); }
+.bfh-bg-6 { background-color: var(--bfh-hellgruen); }
+
+/* ============================================ */
+/* Animation and Transitions */
+/* ============================================ */
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================ */
+/* Accessibility Improvements */
+/* ============================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.btn:focus, .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(80, 110, 150, 0.25);
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: var(--bfh-dunkelgrau);
+    --text-primary: var(--bfh-dunkelgrau);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================ */
+/* Sidebar Layout Improvements */
+/* ============================================ */
+
+/* Make sidebar scroll with main content instead of being fixed */
+.bslib-sidebar-layout > .sidebar {
+  position: static !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.bslib-sidebar-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
+}
+
+.bslib-sidebar-layout > .main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--spacing-sm);
+}
+
+/* Desktop spacing improvements */
+@media (min-width: 1025px) {
+  .bslib-sidebar-layout {
+    gap: var(--spacing-xl);
+  }
+  
+  .bslib-sidebar-layout > .main {
+    padding: 0 var(--spacing-md);
+  }
+  
+  /* More generous panel spacing on desktop */
+  .bfh-panel, .bfh-card {
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  /* Larger container max-width for better use of space */
+  .container-fluid {
+    max-width: 1400px;
+  }
+}
+
+/* Responsive sidebar behavior */
+@media (max-width: 768px) {
+  .bslib-sidebar-layout {
+    flex-direction: column;
+  }
+  
+  .bslib-sidebar-layout > .sidebar {
+    width: 100% !important;
+    order: -1;
+  }
+  
+  /* Better mobile spacing for sidebar content */
+  .sidebar .bfh-panel {
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
+/* Touch optimizations for all devices */
+* {
+  -webkit-tap-highlight-color: rgba(80, 110, 150, 0.3);
+  -webkit-touch-callout: none;
+}
+
+/* Prevent text selection on interactive elements */
+.btn, .nav-link, .bfh-logo {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Improve scroll performance */
+.bfh-plot-container, .bfh-panel, .bfh-card {
+  -webkit-transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0);
+}
+
+/* Better focus indicators for accessibility */
+.btn:focus-visible, .form-control:focus-visible {
+  outline: 3px solid rgba(80, 110, 150, 0.5);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}

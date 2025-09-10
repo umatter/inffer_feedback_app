@@ -1,0 +1,215 @@
+{
+  "languages": ["en", "de", "fr"],
+  "translation": {
+    "R Code Feedback App": {
+      "en": "R Code Feedback App",
+      "de": "R Code Feedback App",
+      "fr": "Application de Feedback R"
+    },
+    "AI-Powered Learning Assistant for WDDA Course": {
+      "en": "AI-Powered Learning Assistant for WDDA Course",
+      "de": "KI-gestützter Lernassistent für WDDA-Kurs",
+      "fr": "Assistant d'Apprentissage IA pour le Cours WDDA"
+    },
+    "Code Analysis": {
+      "en": "Code Analysis",
+      "de": "Code-Analyse",
+      "fr": "Analyse du Code"
+    },
+    "R Programming Guide": {
+      "en": "R Programming Guide",
+      "de": "R Programmier-Leitfaden",
+      "fr": "Guide de Programmation R"
+    },
+    "Settings": {
+      "en": "Settings",
+      "de": "Einstellungen",
+      "fr": "Paramètres"
+    },
+    "Choose Exercise": {
+      "en": "Choose Exercise",
+      "de": "Übung wählen",
+      "fr": "Choisir un Exercice"
+    },
+    "AI Provider": {
+      "en": "AI Provider",
+      "de": "KI-Anbieter",
+      "fr": "Fournisseur IA"
+    },
+    "API Key": {
+      "en": "API Key",
+      "de": "API-Schlüssel",
+      "fr": "Clé API"
+    },
+    "Enter your API key to enable AI feedback": {
+      "en": "Enter your API key to enable AI feedback",
+      "de": "Geben Sie Ihren API-Schlüssel ein, um KI-Feedback zu aktivieren",
+      "fr": "Entrez votre clé API pour activer le feedback IA"
+    },
+    "Save API Key": {
+      "en": "Save API Key",
+      "de": "API-Schlüssel speichern",
+      "fr": "Enregistrer la Clé API"
+    },
+    "API Key saved successfully": {
+      "en": "API Key saved successfully",
+      "de": "API-Schlüssel erfolgreich gespeichert",
+      "fr": "Clé API enregistrée avec succès"
+    },
+    "Exercise Input": {
+      "en": "Exercise Input",
+      "de": "Übungseingabe", 
+      "fr": "Saisie d'Exercice"
+    },
+    "Paste your exercise description or screenshot here. This is the main way to input your assignment.": {
+      "en": "Paste your exercise description or screenshot here. This is the main way to input your assignment.",
+      "de": "Fügen Sie hier Ihre Übungsbeschreibung oder einen Screenshot ein. Dies ist der Hauptweg, um Ihre Aufgabe einzugeben.",
+      "fr": "Collez ici la description de votre exercice ou une capture d'écran. C'est le moyen principal de saisir votre devoir."
+    },
+    "Exercise Description": {
+      "en": "Exercise Description",
+      "de": "Übungsbeschreibung",
+      "fr": "Description de l'Exercice"
+    },
+    "Pasted Image": {
+      "en": "Pasted Image",
+      "de": "Eingefügtes Bild",
+      "fr": "Image Collée"
+    },
+    "Clear Image": {
+      "en": "Clear Image",
+      "de": "Bild löschen",
+      "fr": "Effacer l'Image"
+    },
+    "Clear Exercise": {
+      "en": "Clear Exercise",
+      "de": "Übung löschen",
+      "fr": "Effacer l'Exercice"
+    },
+    "Built-in Exercises": {
+      "en": "Built-in Exercises",
+      "de": "Eingebaute Übungen",
+      "fr": "Exercices Intégrés"
+    },
+    "Or choose from our pre-built exercises for common R programming tasks.": {
+      "en": "Or choose from our pre-built exercises for common R programming tasks.",
+      "de": "Oder wählen Sie aus unseren vorgefertigten Übungen für häufige R-Programmieraufgaben.",
+      "fr": "Ou choisissez parmi nos exercices prédéfinis pour les tâches courantes de programmation R."
+    },
+    "Current Exercise": {
+      "en": "Current Exercise",
+      "de": "Aktuelle Übung",
+      "fr": "Exercice Actuel"
+    },
+    "Description": {
+      "en": "Description",
+      "de": "Beschreibung",
+      "fr": "Description"
+    },
+    "Your Task": {
+      "en": "Your Task",
+      "de": "Ihre Aufgabe",
+      "fr": "Votre Tâche"
+    },
+    "Your R Code": {
+      "en": "Your R Code",
+      "de": "Ihr R Code",
+      "fr": "Votre Code R"
+    },
+    "Analyze Code": {
+      "en": "Analyze Code",
+      "de": "Code analysieren",
+      "fr": "Analyser le Code"
+    },
+    "Clear": {
+      "en": "Clear",
+      "de": "Löschen",
+      "fr": "Effacer"
+    },
+    "Feedback": {
+      "en": "Feedback",
+      "de": "Feedback",
+      "fr": "Retour"
+    },
+    "Reference Solution": {
+      "en": "Reference Solution",
+      "de": "Referenzlösung",
+      "fr": "Solution de Référence"
+    },
+    "Show Reference Solution": {
+      "en": "Show Reference Solution",
+      "de": "Referenzlösung anzeigen",
+      "fr": "Afficher la Solution de Référence"
+    },
+    "R Programming Fundamentals": {
+      "en": "R Programming Fundamentals",
+      "de": "R Programmierung Grundlagen",
+      "fr": "Fondamentaux de la Programmation R"
+    },
+    "Best Practices": {
+      "en": "Best Practices",
+      "de": "Bewährte Praktiken",
+      "fr": "Bonnes Pratiques"
+    },
+    "Common Mistakes": {
+      "en": "Common Mistakes",
+      "de": "Häufige Fehler",
+      "fr": "Erreurs Courantes"
+    },
+    "Learning Resources": {
+      "en": "Learning Resources",
+      "de": "Lernressourcen",
+      "fr": "Ressources d'Apprentissage"
+    },
+    "Please enter some R code to analyze": {
+      "en": "Please enter some R code to analyze",
+      "de": "Bitte geben Sie R-Code zur Analyse ein",
+      "fr": "Veuillez entrer du code R à analyser"
+    },
+    "R is a powerful language for data analysis and statistics. Understanding key concepts like data types, functions, and syntax will help you write effective code.": {
+      "en": "R is a powerful language for data analysis and statistics. Understanding key concepts like data types, functions, and syntax will help you write effective code.",
+      "de": "R ist eine mächtige Sprache für Datenanalyse und Statistik. Das Verständnis wichtiger Konzepte wie Datentypen, Funktionen und Syntax hilft Ihnen, effektiven Code zu schreiben.",
+      "fr": "R est un langage puissant pour l'analyse de données et les statistiques. Comprendre les concepts clés comme les types de données, les fonctions et la syntaxe vous aidera à écrire du code efficace."
+    },
+    "Use descriptive variable names": {
+      "en": "Use descriptive variable names",
+      "de": "Verwenden Sie aussagekräftige Variablennamen",
+      "fr": "Utilisez des noms de variables descriptifs"
+    },
+    "Comment your code for clarity": {
+      "en": "Comment your code for clarity",
+      "de": "Kommentieren Sie Ihren Code für Klarheit",
+      "fr": "Commentez votre code pour plus de clarté"
+    },
+    "Use pipe operators for readable workflows": {
+      "en": "Use pipe operators for readable workflows",
+      "de": "Verwenden Sie Pipe-Operatoren für lesbare Arbeitsabläufe",
+      "fr": "Utilisez les opérateurs pipe pour des flux de travail lisibles"
+    },
+    "Check for missing values with na.rm = TRUE": {
+      "en": "Check for missing values with na.rm = TRUE",
+      "de": "Prüfen Sie fehlende Werte mit na.rm = TRUE",
+      "fr": "Vérifiez les valeurs manquantes avec na.rm = TRUE"
+    },
+    "Forgetting to load required packages": {
+      "en": "Forgetting to load required packages",
+      "de": "Vergessen, erforderliche Pakete zu laden",
+      "fr": "Oublier de charger les packages requis"
+    },
+    "Using = instead of == for comparisons": {
+      "en": "Using = instead of == for comparisons",
+      "de": "Verwenden von = anstatt == für Vergleiche",
+      "fr": "Utiliser = au lieu de == pour les comparaisons"
+    },
+    "Not handling missing values properly": {
+      "en": "Not handling missing values properly",
+      "de": "Fehlende Werte nicht richtig behandeln",
+      "fr": "Ne pas gérer correctement les valeurs manquantes"
+    },
+    "Inconsistent object naming conventions": {
+      "en": "Inconsistent object naming conventions",
+      "de": "Inkonsistente Objekt-Namenskonventionen",
+      "fr": "Conventions de nommage d'objets incohérentes"
+    }
+  }
+}
