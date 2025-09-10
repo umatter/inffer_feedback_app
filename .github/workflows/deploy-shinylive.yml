@@ -54,7 +54,7 @@ jobs:
         
         # Export the Shiny app to Shinylive
         shinylive::export(
-          appdir = '.',
+          appdir = 'app',
           destdir = '_site'
         )
         "
