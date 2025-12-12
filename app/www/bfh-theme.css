@@ -137,26 +137,40 @@
     align-items: flex-start !important;
     text-align: center;
   }
-  
+
   .bfh-logo-container {
     align-self: center;
     margin-bottom: var(--spacing-sm);
     margin-right: 0 !important;
   }
-  
+
   .bfh-logo {
     height: 50px !important;
   }
-  
+
   .bfh-header-text {
     text-align: center;
     width: 100%;
   }
-  
+
   .bfh-header-text h1 {
     font-size: 1.8rem;
   }
-  
+
+  /* Container padding */
+  .container-fluid {
+    padding: var(--spacing-sm);
+  }
+
+  /* Heading sizes */
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
   /* Touch-friendly interactions */
   .btn {
     padding: 16px 32px;
@@ -164,7 +178,7 @@
     min-height: 48px;
     margin: 8px 0;
   }
-  
+
   /* Larger form controls for touch */
   .form-control, .selectize-input {
     padding: 14px 18px;
@@ -172,25 +186,30 @@
     min-height: 48px;
     border-radius: 8px;
   }
-  
+
   /* Better checkbox/radio button sizing */
   input[type="checkbox"], input[type="radio"] {
     width: 20px;
     height: 20px;
     margin: 8px;
   }
-  
+
   /* Larger slider handles */
   .irs--shiny .irs-handle {
     width: 30px;
     height: 30px;
     top: -8px;
   }
-  
+
   /* Better table readability */
   .table td, .table th {
     padding: 12px 8px;
     font-size: 14px;
+  }
+
+  /* Panel padding */
+  .bfh-panel {
+    padding: var(--spacing-sm);
   }
 }
 
@@ -636,31 +655,95 @@ p {
   text-align: center;
 }
 
+/* Note: Responsive design rules consolidated in "Mobile optimizations" section above */
+
 /* ============================================ */
-/* Responsive Design */
+/* Markdown Content Styling (AI Feedback) */
 /* ============================================ */
 
-@media (max-width: 768px) {
-  .container-fluid {
-    padding: var(--spacing-sm);
-  }
-  
-  h1 {
-    font-size: 2rem;
-  }
-  
-  h2 {
-    font-size: 1.5rem;
-  }
-  
-  .btn {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 0.9rem;
-  }
-  
-  .bfh-panel {
-    padding: var(--spacing-sm);
-  }
+.markdown-content {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  color: #2c3e50;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content h1 {
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.markdown-content h2 {
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.markdown-content h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+  color: #34495e;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.3em;
+  color: #34495e;
+}
+
+.markdown-content code {
+  background-color: #f8f9fa;
+  color: #e83e8c;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.markdown-content pre code {
+  background: none;
+  color: #212529;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #007bff;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.markdown-content strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.markdown-content em {
+  color: #6c757d;
 }
 
 /* ============================================ */

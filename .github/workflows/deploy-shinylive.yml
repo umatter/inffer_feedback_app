@@ -36,11 +36,11 @@ jobs:
         extra-packages: |
           any::shinylive
           any::shiny
-          any::shinydashboard
+          any::bslib
           any::shinyjs
-          any::DT
           any::jsonlite
           any::httr2
+          any::markdown
         needs: |
           shinylive
           

@@ -5,7 +5,6 @@ if (FALSE) {
 
 library(shiny)
 library(bslib)
-library(DT)
 library(jsonlite)
 library(httr2)
 library(markdown)
@@ -29,41 +28,22 @@ translate_text <- function(key, lang = "en") {
 }
 
 # Render markdown to HTML with proper styling
+# Note: CSS styles are now in www/bfh-theme.css under .markdown-content
 render_markdown_feedback <- function(markdown_text) {
   if (is.null(markdown_text) || markdown_text == "") {
     return("")
   }
-  
+
   # Convert markdown to HTML
   html_content <- markdown::markdownToHTML(
-    text = markdown_text, 
+    text = markdown_text,
     fragment.only = TRUE,
     options = c('use_xhtml', 'smartypants', 'base64_images', 'mathjax', 'highlight_code')
   )
-  
-  # Add custom CSS styling for better rendering
-  styled_html <- paste0(
-    '<div class="markdown-content">',
-    '<style>',
-    '.markdown-content { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; }',
-    '.markdown-content h1, .markdown-content h2, .markdown-content h3 { color: #2c3e50; margin-top: 1.5em; margin-bottom: 0.5em; }',
-    '.markdown-content h1 { font-size: 1.4em; font-weight: 600; }',
-    '.markdown-content h2 { font-size: 1.2em; font-weight: 600; }',
-    '.markdown-content h3 { font-size: 1.1em; font-weight: 600; }',
-    '.markdown-content p { margin-bottom: 1em; color: #34495e; }',
-    '.markdown-content ul, .markdown-content ol { margin-bottom: 1em; padding-left: 1.5em; }',
-    '.markdown-content li { margin-bottom: 0.3em; color: #34495e; }',
-    '.markdown-content code { background-color: #f8f9fa; color: #e83e8c; padding: 2px 4px; border-radius: 3px; font-family: "Consolas", "Monaco", monospace; font-size: 0.9em; }',
-    '.markdown-content pre { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; overflow-x: auto; margin: 1em 0; }',
-    '.markdown-content pre code { background: none; color: #212529; padding: 0; }',
-    '.markdown-content blockquote { border-left: 4px solid #007bff; padding-left: 1em; margin: 1em 0; color: #6c757d; font-style: italic; }',
-    '.markdown-content strong { color: #2c3e50; font-weight: 600; }',
-    '.markdown-content em { color: #6c757d; }',
-    '</style>',
-    html_content,
-    '</div>'
-  )
-  
+
+  # Wrap in styled container (CSS defined in bfh-theme.css)
+  styled_html <- paste0('<div class="markdown-content">', html_content, '</div>')
+
   return(HTML(styled_html))
 }
 
@@ -168,21 +148,39 @@ BUILTIN_EXERCISES <- list(
 )
 
 # LLM Provider configuration
+# OpenRouter allows access to many models through a unified API
 LLM_PROVIDERS <- list(
   "openai" = list(
-    name = "OpenAI",
-    models = c("gpt-4o", "gpt-4", "gpt-3.5-turbo"),
-    api_endpoint = "https://api.openai.com/v1/chat/completions"
+    name = "OpenAI (Direct)",
+    model = "gpt-4o-mini",
+    api_endpoint = "https://api.openai.com/v1/chat/completions",
+    has_model_selection = FALSE
   ),
   "anthropic" = list(
-    name = "Anthropic",
-    models = c("claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"),
-    api_endpoint = "https://api.anthropic.com/v1/messages"
+    name = "Anthropic (Direct)",
+    model = "claude-3-haiku-20240307",
+    api_endpoint = "https://api.anthropic.com/v1/messages",
+    has_model_selection = FALSE
+  ),
+  "openrouter" = list(
+    name = "OpenRouter",
+    api_endpoint = "https://openrouter.ai/api/v1/chat/completions",
+    has_model_selection = TRUE,
+    # Recommended models for R code analysis (can be customized)
+    # Based on 2025 benchmarks: Qwen leads for coding, DeepSeek offers best value
+    available_models = list(
+      "qwen/qwen-2.5-coder-32b-instruct" = "Qwen 2.5 Coder 32B (Best for coding)",
+      "deepseek/deepseek-chat" = "DeepSeek V3 (Best value)",
+      "deepseek/deepseek-chat-v3-0324:free" = "DeepSeek V3 Free (Free tier)",
+      "google/gemini-2.0-flash-exp:free" = "Gemini 2.0 Flash (Free tier)",
+      "meta-llama/llama-3.3-70b-instruct" = "Llama 3.3 70B (Strong general)",
+      "mistralai/mistral-large-2411" = "Mistral Large (Balanced)",
+      "anthropic/claude-3.5-haiku" = "Claude 3.5 Haiku (Fast)",
+      "openai/gpt-4o-mini" = "GPT-4o Mini (Reliable)"
+    ),
+    default_model = "qwen/qwen-2.5-coder-32b-instruct"
   )
 )
-
-# Simple reactive value to track current language
-current_lang <- reactiveVal("en")
 
 ui <- function(request) {
   # Add BFH theme CSS and language selector to page
@@ -236,10 +234,34 @@ ui <- function(request) {
                   textOutput("llm_provider_label", inline = TRUE),
                   choices = c(
                     "Select Provider" = "",
-                    "OpenAI" = "openai",
-                    "Anthropic" = "anthropic"
+                    "OpenAI (Direct)" = "openai",
+                    "Anthropic (Direct)" = "anthropic",
+                    "OpenRouter (Multi-Model)" = "openrouter"
                   ),
                   selected = ""
+                ),
+
+                # Model Selection (only for OpenRouter)
+                conditionalPanel(
+                  condition = "input.llm_provider == 'openrouter'",
+                  selectInput(
+                    "openrouter_model",
+                    textOutput("model_selection_label", inline = TRUE),
+                    choices = c(
+                      "Qwen 2.5 Coder 32B (Best for coding)" = "qwen/qwen-2.5-coder-32b-instruct",
+                      "DeepSeek V3 (Best value)" = "deepseek/deepseek-chat",
+                      "DeepSeek V3 Free (Free tier)" = "deepseek/deepseek-chat-v3-0324:free",
+                      "Gemini 2.0 Flash (Free tier)" = "google/gemini-2.0-flash-exp:free",
+                      "Llama 3.3 70B (Strong general)" = "meta-llama/llama-3.3-70b-instruct",
+                      "Mistral Large (Balanced)" = "mistralai/mistral-large-2411",
+                      "Claude 3.5 Haiku (Fast)" = "anthropic/claude-3.5-haiku",
+                      "GPT-4o Mini (Reliable)" = "openai/gpt-4o-mini"
+                    ),
+                    selected = "qwen/qwen-2.5-coder-32b-instruct"
+                  ),
+                  div(class = "text-muted text-small mb-2",
+                      textOutput("model_selection_help")
+                  )
                 ),
                 
                 # API Key Input
@@ -265,6 +287,9 @@ ui <- function(request) {
                         tags$i(class = "fa fa-check"), " ",
                         textOutput("api_key_saved_text", inline = TRUE)
                     )
+                  ),
+                  div(class = "text-danger text-small mt-2",
+                      textOutput("api_key_error", inline = TRUE)
                   )
                 )
               )
@@ -288,20 +313,30 @@ ui <- function(request) {
                   # Add JavaScript for clipboard image handling
                   tags$script(HTML("
                     $(document).ready(function() {
+                      var MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
+
                       // Handle paste events on the exercise text area
                       $('#exercise_text').on('paste', function(e) {
-                        var items = (e.originalEvent.clipboardData || e.originalEvent.clipboardData).items;
-                        
+                        var items = (e.originalEvent.clipboardData || window.clipboardData).items;
+
                         for (var i = 0; i < items.length; i++) {
                           if (items[i].type.indexOf('image') !== -1) {
                             var blob = items[i].getAsFile();
+
+                            // Check file size before processing
+                            if (blob.size > MAX_IMAGE_SIZE) {
+                              Shiny.setInputValue('pasted_image_error', 'Image too large (max 5MB)', {priority: 'event'});
+                              e.preventDefault();
+                              return;
+                            }
+
                             var reader = new FileReader();
-                            
+
                             reader.onload = function(event) {
                               // Send the image data to Shiny
                               Shiny.setInputValue('pasted_image_data', event.target.result, {priority: 'event'});
                             };
-                            
+
                             reader.readAsDataURL(blob);
                             e.preventDefault(); // Prevent the default paste action for images
                           }
@@ -424,15 +459,57 @@ ui <- function(request) {
 }
 
 server <- function(input, output, session) {
-  
+
+  # Reactive value for language (session-scoped)
+  current_lang <- reactiveVal("en")
+
   # Reactive values for API key management
   api_key_saved <- reactiveVal(FALSE)
   saved_api_key <- reactiveVal("")
-  
+
   # Reactive values for exercise input
   has_exercise_image <- reactiveVal(FALSE)
   exercise_image_data <- reactiveVal("")
-  
+
+  # Auto-detect API keys from environment variables (local development only)
+  # This does NOT run in webR/Shinylive deployment (sandboxed, no env var access)
+  observe({
+    # Skip if running in webR/Shinylive (WASM/Emscripten platform)
+    if (grepl("wasm|emscripten", R.version$platform, ignore.case = TRUE)) {
+      return()
+    }
+
+    # Check for OpenRouter API key first (preferred)
+    openrouter_key <- Sys.getenv("OPENROUTER_API_KEY", "")
+    if (nzchar(openrouter_key)) {
+      updateSelectInput(session, "llm_provider", selected = "openrouter")
+      updateTextInput(session, "api_key", value = openrouter_key)
+      saved_api_key(openrouter_key)
+      api_key_saved(TRUE)
+      return()
+    }
+
+    # Check for OpenAI API key
+    openai_key <- Sys.getenv("OPENAI_API_KEY", "")
+    if (nzchar(openai_key)) {
+      updateSelectInput(session, "llm_provider", selected = "openai")
+      updateTextInput(session, "api_key", value = openai_key)
+      saved_api_key(openai_key)
+      api_key_saved(TRUE)
+      return()
+    }
+
+    # Check for Anthropic API key
+    anthropic_key <- Sys.getenv("ANTHROPIC_API_KEY", "")
+    if (nzchar(anthropic_key)) {
+      updateSelectInput(session, "llm_provider", selected = "anthropic")
+      updateTextInput(session, "api_key", value = anthropic_key)
+      saved_api_key(anthropic_key)
+      api_key_saved(TRUE)
+      return()
+    }
+  }) |> bindEvent(TRUE, once = TRUE)  # Run only once on session start
+
   # Update language when user changes selection
   observeEvent(input$selected_language, {
     current_lang(input$selected_language)
@@ -445,6 +522,8 @@ server <- function(input, output, session) {
   output$theory_title <- renderText({ translate_text("R Programming Guide", current_lang()) })
   output$settings_title <- renderText({ translate_text("Settings", current_lang()) })
   output$llm_provider_label <- renderText({ translate_text("AI Provider", current_lang()) })
+  output$model_selection_label <- renderText({ translate_text("Model Selection", current_lang()) })
+  output$model_selection_help <- renderText({ translate_text("Choose a model based on your needs - coding specialists offer better R feedback", current_lang()) })
   output$api_key_label <- renderText({ translate_text("API Key", current_lang()) })
   output$api_key_help <- renderText({ translate_text("Enter your API key to enable AI feedback", current_lang()) })
   output$save_api_key_text <- renderText({ translate_text("Save API Key", current_lang()) })
@@ -470,14 +549,38 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "student_code", value = "")
   })
   
+  # API key format validation helper
+  validate_api_key <- function(key, provider) {
+    key <- trimws(key)
+    if (nchar(key) == 0) {
+      return(list(valid = FALSE, message = "API key is required"))
+    }
+    if (provider == "openai" && !grepl("^sk-", key)) {
+      return(list(valid = FALSE, message = "OpenAI API keys should start with 'sk-'"))
+    }
+    if (provider == "anthropic" && !grepl("^sk-ant-", key)) {
+      return(list(valid = FALSE, message = "Anthropic API keys should start with 'sk-ant-'"))
+    }
+    if (provider == "openrouter" && !grepl("^sk-or-", key)) {
+      return(list(valid = FALSE, message = "OpenRouter API keys should start with 'sk-or-'"))
+    }
+    return(list(valid = TRUE, message = ""))
+  }
+
+  # Reactive value for API key validation error
+  api_key_error <- reactiveVal("")
+
   # Save API key button
   observeEvent(input$save_api_key, {
-    if (nchar(trimws(input$api_key)) > 0) {
-      saved_api_key(input$api_key)
+    validation <- validate_api_key(input$api_key, input$llm_provider)
+    if (validation$valid) {
+      saved_api_key(trimws(input$api_key))
       api_key_saved(TRUE)
+      api_key_error("")
     } else {
       api_key_saved(FALSE)
       saved_api_key("")
+      api_key_error(validation$message)
     }
   })
   
@@ -485,13 +588,19 @@ server <- function(input, output, session) {
   observeEvent(input$llm_provider, {
     api_key_saved(FALSE)
     saved_api_key("")
+    api_key_error("")
   })
-  
+
   # Output for API key saved status
   output$api_key_saved <- reactive({
     api_key_saved()
   })
   outputOptions(output, "api_key_saved", suspendWhenHidden = FALSE)
+
+  # Output for API key error message
+  output$api_key_error <- renderText({
+    api_key_error()
+  })
   
   # Clear exercise button
   observeEvent(input$clear_exercise, {
@@ -511,12 +620,23 @@ server <- function(input, output, session) {
     if (!is.null(input$pasted_image_data)) {
       has_exercise_image(TRUE)
       exercise_image_data(input$pasted_image_data)
-      
+
       # Update the image display
       output$exercise_image_display <- renderUI({
-        tags$img(src = input$pasted_image_data, 
+        tags$img(src = input$pasted_image_data,
                 style = "max-width: 100%; height: auto; border-radius: 4px;")
       })
+    }
+  })
+
+  # Handle pasted image error (e.g., file too large)
+  observeEvent(input$pasted_image_error, {
+    if (!is.null(input$pasted_image_error)) {
+      showNotification(
+        input$pasted_image_error,
+        type = "error",
+        duration = 5
+      )
     }
   })
   
@@ -537,19 +657,20 @@ server <- function(input, output, session) {
       return()
     }
     
-    # Show spinner immediately with JavaScript
-    shinyjs::runjs("
+    # Show spinner immediately with JavaScript (using translated text)
+    loading_msg <- translate_text("Analyzing your code... Please wait, this may take a few moments.", current_lang())
+    shinyjs::runjs(sprintf("
       $('#feedback_display').html(`
         <div class='alert alert-info'>
           <div class='d-flex align-items-center'>
             <div class='spinner-border spinner-border-sm me-2' role='status' style='width: 1.2rem; height: 1.2rem;'>
               <span class='visually-hidden'>Loading...</span>
             </div>
-            <span>🤖 Analyzing your code... Please wait, this may take a few moments.</span>
+            <span>🤖 %s</span>
           </div>
         </div>
       `);
-    ")
+    ", loading_msg))
     
     # Use custom exercise input
     exercise_context <- list(
@@ -562,25 +683,20 @@ server <- function(input, output, session) {
       has_image = has_exercise_image(),
       image_data = if(has_exercise_image()) exercise_image_data() else ""
     )
-    
-    # Debug: Print provider and API key status
-    cat("Provider:", input$llm_provider, "\n")
-    cat("API Key available:", !is.null(saved_api_key()) && saved_api_key() != "", "\n")
-    
+
+    # Get API key - use saved key if available, otherwise use input directly
+    api_key_to_use <- if (nzchar(saved_api_key())) saved_api_key() else trimws(input$api_key)
+
     # Perform analysis
     feedback_result <- analyze_code(
       student_code = input$student_code,
       exercise = exercise_context,
       provider = input$llm_provider,
-      api_key = saved_api_key()
+      api_key = api_key_to_use,
+      model = if (input$llm_provider == "openrouter") input$openrouter_model else NULL,
+      lang = current_lang()
     )
-    
-    # Debug: Print feedback result structure
-    cat("AI feedback available:", !is.null(feedback_result$ai_feedback), "\n")
-    if (!is.null(feedback_result$ai_feedback)) {
-      cat("AI feedback content length:", nchar(as.character(feedback_result$ai_feedback)), "\n")
-    }
-    
+
     # Update with results 
     output$feedback_display <- renderUI({
       result_ui <- create_feedback_ui(feedback_result, current_lang())
@@ -640,26 +756,26 @@ server <- function(input, output, session) {
 }
 
 # Feedback analysis function
-analyze_code <- function(student_code, exercise, provider = "", api_key = "") {
+analyze_code <- function(student_code, exercise, provider = "", api_key = "", model = NULL, lang = "en") {
   feedback <- list(
     syntax_check = check_syntax(student_code),
     rule_based = check_rules(student_code, exercise),
     ai_feedback = NULL
   )
-  
+
   # Add AI feedback if provider and key are available
   if (provider != "" && api_key != "") {
-    feedback$ai_feedback <- get_ai_feedback(student_code, exercise, provider, api_key)
+    feedback$ai_feedback <- get_ai_feedback(student_code, exercise, provider, api_key, model, lang)
   }
-  
+
   return(feedback)
 }
 
-# Basic syntax checking
+# Basic syntax checking - just validates R parsing
 check_syntax <- function(code) {
   tryCatch({
     parse(text = code)
-    list(valid = TRUE, message = "Syntax is valid")
+    list(valid = TRUE, message = "Code can be parsed")
   }, error = function(e) {
     list(valid = FALSE, message = paste("Syntax error:", e$message))
   })
@@ -764,53 +880,58 @@ check_rules <- function(code, exercise) {
     }
   }
   
-  # General code quality checks
-  if (grepl("#", code)) {
-    good_practices <- c(good_practices, "Great job adding comments!")
-  } else {
-    suggestions <- c(suggestions, "Consider adding comments to explain your code")
-  }
-  
+  # Minimal general checks - let the LLM do the heavy lifting
   list(issues = issues, suggestions = suggestions, good_practices = good_practices)
 }
 
 # AI feedback with actual API implementation
-get_ai_feedback <- function(student_code, exercise, provider, api_key) {
+get_ai_feedback <- function(student_code, exercise, provider, api_key, model = NULL, lang = "en") {
   if (is.null(provider) || provider == "" || is.null(api_key) || api_key == "") {
     return(list(
       available = FALSE,
       message = "Please configure AI provider and API key in Settings"
     ))
   }
-  
+
   # Create the prompt for the AI
   exercise_context <- ""
   if (!is.null(exercise) && !is.null(exercise$description) && exercise$description != "") {
     exercise_context <- paste("Exercise context:", exercise$description, "\n\n")
   }
-  
+
+ # Language-specific instructions
+  lang_instruction <- switch(lang,
+    "de" = "WICHTIG: Antworte komplett auf Deutsch. Alle Erklärungen, Feedback und Kommentare müssen auf Deutsch sein.",
+    "fr" = "IMPORTANT: Réponds entièrement en français. Toutes les explications, commentaires et retours doivent être en français.",
+    "IMPORTANT: Respond entirely in English."
+  )
+
   prompt <- paste0(
     "You are an R programming tutor providing constructive feedback to students learning R programming.\n\n",
+    lang_instruction, "\n\n",
     exercise_context,
     "Student's R code:\n```r\n", student_code, "\n```\n\n",
-    "Please analyze the code and provide helpful, encouraging feedback that covers:\n\n",
+    "Provide helpful, encouraging feedback that covers:\n",
     "1. **Code Analysis**: Review correctness, identify any errors, and suggest fixes\n",
     "2. **Best Practices**: Highlight good coding habits and suggest style improvements\n",
     "3. **Learning Opportunities**: Point out clever solutions or suggest alternative approaches\n",
     "4. **Next Steps**: Recommend what the student could explore next to improve their R skills\n\n",
-    "Remember to:\n",
-    "- Start with positive observations about what the student did well\n",
-    "- Frame suggestions as learning opportunities rather than criticisms  \n",
-    "- Include motivational remarks about their programming journey\n",
-    "- Use markdown formatting for clear, readable feedback\n",
-    "- Keep the tone supportive and educational, celebrating progress while guiding improvement"
+    "IMPORTANT FORMATTING RULES:\n",
+    "- Output ONLY the feedback itself - do NOT include any thinking, reasoning, or planning\n",
+    "- Start directly with a friendly greeting and the feedback content\n",
+    "- Do NOT write phrases like 'Let me analyze...' or 'I need to...' or 'Okay, let me...'\n",
+    "- Use markdown formatting (headers, bullet points, code blocks)\n",
+    "- Start with positive observations\n",
+    "- Keep the tone supportive and educational"
   )
-  
+
   tryCatch({
     if (provider == "openai") {
       return(call_openai_api(prompt, api_key))
     } else if (provider == "anthropic") {
       return(call_anthropic_api(prompt, api_key))
+    } else if (provider == "openrouter") {
+      return(call_openrouter_api(prompt, api_key, model))
     } else {
       return(list(
         available = FALSE,
@@ -841,19 +962,30 @@ call_openai_api <- function(prompt, api_key) {
         max_tokens = 1000,
         temperature = 0.7
       )) |>
+      req_timeout(30) |>
       req_perform()
     
     if (resp_status(response) == 200) {
       result <- resp_body_json(response)
-      feedback_text <- result$choices[[1]]$message$content
-      
-      return(list(
-        available = TRUE,
-        message = feedback_text,
-        provider = "OpenAI GPT-4o-mini"
-      ))
+
+      # Validate response structure
+      if (!is.null(result$choices) &&
+          length(result$choices) > 0 &&
+          !is.null(result$choices[[1]]$message$content)) {
+        feedback_text <- result$choices[[1]]$message$content
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = "OpenAI GPT-4o-mini"
+        ))
+      } else {
+        return(list(
+          available = FALSE,
+          message = "OpenAI API Error: Unexpected response format"
+        ))
+      }
     } else {
-      error_info <- resp_body_json(response)
+      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
       return(list(
         available = FALSE,
         message = paste("OpenAI API Error:", error_info$error$message %||% "Unknown error")
@@ -883,19 +1015,30 @@ call_anthropic_api <- function(prompt, api_key) {
           list(role = "user", content = prompt)
         )
       )) |>
+      req_timeout(30) |>
       req_perform()
     
     if (resp_status(response) == 200) {
       result <- resp_body_json(response)
-      feedback_text <- result$content[[1]]$text
-      
-      return(list(
-        available = TRUE,
-        message = feedback_text,
-        provider = "Anthropic Claude-3-Haiku"
-      ))
+
+      # Validate response structure
+      if (!is.null(result$content) &&
+          length(result$content) > 0 &&
+          !is.null(result$content[[1]]$text)) {
+        feedback_text <- result$content[[1]]$text
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = "Anthropic Claude-3-Haiku"
+        ))
+      } else {
+        return(list(
+          available = FALSE,
+          message = "Anthropic API Error: Unexpected response format"
+        ))
+      }
     } else {
-      error_info <- resp_body_json(response)
+      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
       return(list(
         available = FALSE,
         message = paste("Anthropic API Error:", error_info$error$message %||% "Unknown error")
@@ -905,6 +1048,153 @@ call_anthropic_api <- function(prompt, api_key) {
     return(list(
       available = FALSE,
       message = paste("Anthropic API Error:", e$message)
+    ))
+  })
+}
+
+# Helper function to strip thinking/reasoning content from LLM responses
+strip_thinking_content <- function(text) {
+  # Step 1: Remove <think>...</think> blocks (used by DeepSeek and others)
+  # Use (?s) for DOTALL mode to match across newlines
+  text <- gsub("(?s)<think>.*?</think>", "", text, perl = TRUE)
+
+  # Step 2: Remove <thinking>...</thinking> blocks
+  text <- gsub("(?s)<thinking>.*?</thinking>", "", text, perl = TRUE)
+
+  # Step 3: Remove common thinking preamble patterns at the start of response
+  # These catch models that output "Okay, let me analyze..." before actual feedback
+  thinking_preambles <- c(
+    "^\\s*Okay,?\\s+(let me|I'll|I need|I should|so)[^\\n]*\\n+",
+    "^\\s*Alright,?\\s+(let me|I'll|I need|I should|so)[^\\n]*\\n+",
+    "^\\s*Let me (analyze|look|check|review|examine|think|consider|see|figure)[^\\n]*\\n+",
+    "^\\s*I('ll| will| need to| should)\\s+(analyze|look|check|review|examine|think|consider|see|figure)[^\\n]*\\n+",
+    "^\\s*Looking at (this|the|your)[^\\n]*\\n+",
+    "^\\s*First,? (let me|I'll|I need|I should)[^\\n]*\\n+",
+    "^\\s*So,?\\s+(the|this|looking|let me|I)[^\\n]*\\n+",
+    "^\\s*Hmm,?[^\\n]*\\n+",
+    "^\\s*Now,? (let me|I'll|I need)[^\\n]*\\n+"
+  )
+
+  # Apply each pattern repeatedly until no more matches
+  for (pattern in thinking_preambles) {
+    prev_text <- ""
+    iterations <- 0
+    while (prev_text != text && iterations < 10) {
+      prev_text <- text
+      text <- sub(pattern, "", text, perl = TRUE, ignore.case = TRUE)
+      iterations <- iterations + 1
+    }
+  }
+
+  # Step 4: If text still has thinking content, find where actual feedback starts
+  # Look for common feedback starters and strip everything before them
+  feedback_starters <- c(
+    "(?m)^Hi[!,]",                    # "Hi!" or "Hi,"
+    "(?m)^Hello[!,]",                 # "Hello!" or "Hello,"
+    "(?m)^Hey[!,]",                   # "Hey!" or "Hey,"
+    "(?m)^Great (job|work|effort|start)",
+    "(?m)^Good (job|work|effort|start)",
+    "(?m)^Nice (job|work|effort|try)",
+    "(?m)^Well done",
+    "(?m)^Thank you",
+    "(?m)^Thanks for",
+    "(?m)^I (see|notice|can see)",
+    "(?m)^## ",                       # Markdown H2
+    "(?m)^# ",                        # Markdown H1
+    "(?m)^\\*\\*",                    # Bold markdown
+    "(?m)^Your (code|solution|approach)",
+    "(?m)^The (code|solution)",
+    "(?m)^This (code|looks|is)"
+  )
+
+  for (pattern in feedback_starters) {
+    match <- regexpr(pattern, text, perl = TRUE)
+    if (match[1] > 1 && match[1] < 500) {
+      # Found actual feedback within first 500 chars - strip preamble
+      text <- substr(text, match[1], nchar(text))
+      break
+    }
+  }
+
+  return(trimws(text))
+}
+
+# OpenRouter API call (supports multiple models)
+call_openrouter_api <- function(prompt, api_key, model = "deepseek/deepseek-chat") {
+  if (is.null(model) || model == "") {
+    model <- "deepseek/deepseek-chat"
+  }
+
+  # Extract human-readable model name for display
+  model_display_name <- switch(model,
+    "qwen/qwen-2.5-coder-32b-instruct" = "Qwen 2.5 Coder 32B",
+    "deepseek/deepseek-chat" = "DeepSeek V3",
+    "deepseek/deepseek-chat-v3-0324:free" = "DeepSeek V3 (Free)",
+    "google/gemini-2.0-flash-exp:free" = "Gemini 2.0 Flash (Free)",
+    "meta-llama/llama-3.3-70b-instruct" = "Llama 3.3 70B",
+    "mistralai/mistral-large-2411" = "Mistral Large",
+    "anthropic/claude-3.5-haiku" = "Claude 3.5 Haiku",
+    "openai/gpt-4o-mini" = "GPT-4o Mini",
+    model  # fallback to model ID
+  )
+
+  tryCatch({
+    response <- request("https://openrouter.ai/api/v1/chat/completions") |>
+      req_headers(
+        "Authorization" = paste("Bearer", api_key),
+        "Content-Type" = "application/json",
+        "HTTP-Referer" = "https://github.com/umatter/inffer_feedback_app",
+        "X-Title" = "WDDA R Code Feedback App"
+      ) |>
+      req_body_json(list(
+        model = model,
+        messages = list(
+          list(role = "user", content = prompt)
+        ),
+        max_tokens = 1000,
+        temperature = 0.7,
+        # Disable extended thinking/reasoning for models that support it
+        # This prevents reasoning tokens from appearing in the response
+        reasoning = list(exclude = TRUE)
+      )) |>
+      req_timeout(60) |>  # longer timeout for OpenRouter routing
+      req_perform()
+
+    if (resp_status(response) == 200) {
+      result <- resp_body_json(response)
+
+      # OpenRouter uses OpenAI-compatible response format
+      if (!is.null(result$choices) &&
+          length(result$choices) > 0 &&
+          !is.null(result$choices[[1]]$message$content)) {
+        feedback_text <- result$choices[[1]]$message$content
+        # Strip any thinking/reasoning content that some models output
+        feedback_text <- strip_thinking_content(feedback_text)
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = paste("OpenRouter:", model_display_name)
+        ))
+      } else {
+        return(list(
+          available = FALSE,
+          message = "OpenRouter API Error: Unexpected response format"
+        ))
+      }
+    } else {
+      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
+      error_msg <- error_info$error$message %||%
+                   error_info$error$code %||%
+                   "Unknown error"
+      return(list(
+        available = FALSE,
+        message = paste("OpenRouter API Error:", error_msg)
+      ))
+    }
+  }, error = function(e) {
+    return(list(
+      available = FALSE,
+      message = paste("OpenRouter API Error:", e$message)
     ))
   })
 }
@@ -978,7 +1268,7 @@ create_feedback_ui <- function(feedback, lang) {
   if (length(ui_elements) == 0) {
     ui_elements <- list(
       div(class = "alert alert-light",
-          "Click 'Analyze Code' to get feedback on your R code."
+          translate_text("Click 'Analyze Code' to get feedback on your R code.", lang())
       )
     )
   }

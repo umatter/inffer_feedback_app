@@ -36,6 +36,16 @@
       "de": "KI-Anbieter",
       "fr": "Fournisseur IA"
     },
+    "Model Selection": {
+      "en": "Model Selection",
+      "de": "Modellauswahl",
+      "fr": "Sélection du Modèle"
+    },
+    "Choose a model based on your needs - coding specialists offer better R feedback": {
+      "en": "Choose a model based on your needs - coding specialists offer better R feedback",
+      "de": "Wählen Sie ein Modell nach Ihren Bedürfnissen - Coding-Spezialisten bieten besseres R-Feedback",
+      "fr": "Choisissez un modèle selon vos besoins - les spécialistes du code offrent un meilleur feedback R"
+    },
     "API Key": {
       "en": "API Key",
       "de": "API-Schlüssel",
@@ -210,6 +220,16 @@
       "en": "Inconsistent object naming conventions",
       "de": "Inkonsistente Objekt-Namenskonventionen",
       "fr": "Conventions de nommage d'objets incohérentes"
+    },
+    "Analyzing your code... Please wait, this may take a few moments.": {
+      "en": "Analyzing your code... Please wait, this may take a few moments.",
+      "de": "Analysiere Ihren Code... Bitte warten Sie, dies kann einige Momente dauern.",
+      "fr": "Analyse de votre code... Veuillez patienter, cela peut prendre quelques instants."
+    },
+    "Click 'Analyze Code' to get feedback on your R code.": {
+      "en": "Click 'Analyze Code' to get feedback on your R code.",
+      "de": "Klicken Sie auf 'Code analysieren', um Feedback zu Ihrem R-Code zu erhalten.",
+      "fr": "Cliquez sur 'Analyser le Code' pour obtenir un retour sur votre code R."
     }
   }
 }
