@@ -928,9 +928,11 @@ analyze_code <- function(student_code, exercise) {
 check_syntax <- function(code) {
   tryCatch({
     parse(text = code)
-    list(valid = TRUE, message = "Code can be parsed")
+    list(valid = TRUE, message = "Valid R syntax (parseable)")
   }, error = function(e) {
-    list(valid = FALSE, message = paste("Syntax error:", e$message))
+    # Extract just the error message, remove the "Error in parse..." prefix
+    error_msg <- conditionMessage(e)
+    list(valid = FALSE, message = paste("Syntax error:", error_msg))
   })
 }
 
@@ -1119,6 +1121,40 @@ prepare_api_request <- function(student_code, exercise, provider, api_key, model
     if (is.null(model) || model == "") {
       model <- "deepseek/deepseek-chat"
     }
+
+    # Build base request body
+    body <- list(
+      model = model,
+      messages = list(
+        list(role = "user", content = prompt)
+      ),
+      max_tokens = 1000L,
+      temperature = 0.7
+    )
+
+    # Model-specific adjustments
+    # Reasoning models (DeepSeek) - disable extended thinking to get clean output
+    if (grepl("^deepseek/", model)) {
+      # DeepSeek models support reasoning parameter
+      # Set to exclude to prevent <think> blocks in output
+      body$reasoning <- list(exclude = TRUE)
+    }
+
+    # Models that work better with lower temperature for code feedback
+    if (grepl("qwen.*coder|deepseek", model, ignore.case = TRUE)) {
+      body$temperature <- 0.5
+    }
+
+    # Anthropic via OpenRouter - may need specific handling
+    if (grepl("^anthropic/", model)) {
+      # Claude models via OpenRouter use standard format, no special params needed
+    }
+
+    # Google models via OpenRouter
+    if (grepl("^google/", model)) {
+      # Gemini models use standard format
+    }
+
     return(list(
       url = "https://openrouter.ai/api/v1/chat/completions",
       headers = list(
@@ -1127,14 +1163,7 @@ prepare_api_request <- function(student_code, exercise, provider, api_key, model
         "HTTP-Referer" = "https://github.com/umatter/inffer_feedback_app",
         "X-Title" = "WDDA R Code Feedback App"
       ),
-      body = list(
-        model = model,
-        messages = list(
-          list(role = "user", content = prompt)
-        ),
-        max_tokens = 1000L,
-        temperature = 0.7
-      ),
+      body = body,
       requestId = request_id
     ))
   }
