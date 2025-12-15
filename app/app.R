@@ -6,9 +6,81 @@ if (FALSE) {
 library(shiny)
 library(bslib)
 library(jsonlite)
-library(httr2)
 library(markdown)
 library(shinyjs)
+
+# JavaScript code for making API calls via browser fetch (required for webR/Shinylive)
+js_fetch_api <- "
+shinyjs.callLLMApi = function(paramsJson) {
+  // shinyjs passes arguments as an array, extract first element
+  var input = Array.isArray(paramsJson) ? paramsJson[0] : paramsJson;
+
+  // Handle both string (needs parsing) and object (already parsed by shinyjs)
+  var params;
+  if (typeof input === 'string') {
+    try {
+      params = JSON.parse(input);
+    } catch(e) {
+      console.error('Failed to parse params JSON:', e);
+      Shiny.setInputValue('api_response', {
+        requestId: 'unknown',
+        success: false,
+        error: 'Failed to parse API parameters'
+      }, {priority: 'event'});
+      return;
+    }
+  } else {
+    // Already an object
+    params = input;
+  }
+
+  var url = params.url;
+  var headers = params.headers;
+  var body = params.body;
+  var requestId = params.requestId;
+
+  // Debug logging
+  console.log('=== LLM API CALL ===');
+  console.log('URL:', url);
+  console.log('Headers:', headers);
+  console.log('Body:', body);
+
+  fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(body)
+  })
+  .then(response => {
+    console.log('Response Status:', response.status);
+    if (!response.ok) {
+      return response.json().then(errData => {
+        console.log('Error Response:', errData);
+        throw new Error(errData.error?.message || 'API request failed with status ' + response.status);
+      }).catch((e) => {
+        if (e.message && e.message.includes('API request failed')) throw e;
+        throw new Error('API request failed with status ' + response.status);
+      });
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Success Response:', data);
+    Shiny.setInputValue('api_response', {
+      requestId: requestId,
+      success: true,
+      data: data
+    }, {priority: 'event'});
+  })
+  .catch(error => {
+    console.error('API Error:', error.message);
+    Shiny.setInputValue('api_response', {
+      requestId: requestId,
+      success: false,
+      error: error.message
+    }, {priority: 'event'});
+  });
+}
+"
 
 # Source BFH theme helpers (local copy for Shinylive compatibility)
 source("bfh_theme_helpers.R")
@@ -188,8 +260,9 @@ ui <- function(request) {
     # Add BFH theme CSS
     add_bfh_theme(),
     
-    # Enable shinyjs
+    # Enable shinyjs with custom API fetch function
     useShinyjs(),
+    extendShinyjs(text = js_fetch_api, functions = c("callLLMApi")),
     
     page_navbar(
       title = NULL,
@@ -471,6 +544,10 @@ server <- function(input, output, session) {
   has_exercise_image <- reactiveVal(FALSE)
   exercise_image_data <- reactiveVal("")
 
+  # Reactive values for async API handling
+  pending_api_context <- reactiveVal(NULL)  # Stores context while waiting for API response
+  partial_feedback <- reactiveVal(NULL)     # Stores syntax/rule results while waiting for AI
+
   # Auto-detect API keys from environment variables (local development only)
   # This does NOT run in webR/Shinylive deployment (sandboxed, no env var access)
   observe({
@@ -656,22 +733,7 @@ server <- function(input, output, session) {
       })
       return()
     }
-    
-    # Show spinner immediately with JavaScript (using translated text)
-    loading_msg <- translate_text("Analyzing your code... Please wait, this may take a few moments.", current_lang())
-    shinyjs::runjs(sprintf("
-      $('#feedback_display').html(`
-        <div class='alert alert-info'>
-          <div class='d-flex align-items-center'>
-            <div class='spinner-border spinner-border-sm me-2' role='status' style='width: 1.2rem; height: 1.2rem;'>
-              <span class='visually-hidden'>Loading...</span>
-            </div>
-            <span>🤖 %s</span>
-          </div>
-        </div>
-      `);
-    ", loading_msg))
-    
+
     # Use custom exercise input
     exercise_context <- list(
       title = "Custom Exercise",
@@ -684,36 +746,133 @@ server <- function(input, output, session) {
       image_data = if(has_exercise_image()) exercise_image_data() else ""
     )
 
-    # Get API key - use saved key if available, otherwise use input directly
-    api_key_to_use <- if (nzchar(saved_api_key())) saved_api_key() else trimws(input$api_key)
-
-    # Perform analysis
-    feedback_result <- analyze_code(
-      student_code = input$student_code,
-      exercise = exercise_context,
-      provider = input$llm_provider,
-      api_key = api_key_to_use,
-      model = if (input$llm_provider == "openrouter") input$openrouter_model else NULL,
-      lang = current_lang()
+    # Run synchronous checks (syntax and rules)
+    sync_feedback <- list(
+      syntax_check = check_syntax(input$student_code),
+      rule_based = check_rules(input$student_code, exercise_context),
+      ai_feedback = NULL
     )
 
-    # Update with results 
-    output$feedback_display <- renderUI({
-      result_ui <- create_feedback_ui(feedback_result, current_lang())
-      result_ui
-    })
-    
+    # Get API key - use saved key if available, otherwise use input directly
+    api_key_to_use <- if (nzchar(saved_api_key())) saved_api_key() else trimws(input$api_key)
+    provider <- input$llm_provider
+    model <- if (provider == "openrouter") input$openrouter_model else NULL
+
+    # Check if we should request AI feedback
+    has_api_config <- provider != "" && nzchar(api_key_to_use)
+
+    if (has_api_config) {
+      # Store partial feedback and context for async completion
+      partial_feedback(sync_feedback)
+      pending_api_context(list(
+        provider = provider,
+        model = model,
+        lang = current_lang()
+      ))
+
+      # Show partial results with loading indicator for AI
+      loading_msg <- translate_text("Getting AI feedback...", current_lang())
+      output$feedback_display <- renderUI({
+        tagList(
+          create_feedback_ui(sync_feedback, current_lang),
+          div(class = "alert alert-info",
+              div(class = "d-flex align-items-center",
+                  div(class = "spinner-border spinner-border-sm me-2", role = "status",
+                      style = "width: 1.2rem; height: 1.2rem;",
+                      span(class = "visually-hidden", "Loading...")
+                  ),
+                  span(paste0("🤖 ", loading_msg))
+              )
+          )
+        )
+      })
+
+      # Trigger async API call via JavaScript
+      api_params <- prepare_api_request(
+        student_code = input$student_code,
+        exercise = exercise_context,
+        provider = provider,
+        api_key = api_key_to_use,
+        model = model,
+        lang = current_lang()
+      )
+
+      if (!is.null(api_params)) {
+        # Convert to JSON string for JavaScript
+        api_params_json <- toJSON(api_params, auto_unbox = TRUE)
+        js$callLLMApi(api_params_json)
+      } else {
+        # API params couldn't be prepared - show error
+        sync_feedback$ai_feedback <- list(
+          available = FALSE,
+          message = "Could not prepare API request"
+        )
+        output$feedback_display <- renderUI({
+          create_feedback_ui(sync_feedback, current_lang)
+        })
+        pending_api_context(NULL)
+        partial_feedback(NULL)
+      }
+    } else {
+      # No API configured - just show sync results
+      if (provider == "") {
+        sync_feedback$ai_feedback <- list(
+          available = FALSE,
+          message = translate_text("Please configure AI provider and API key in Settings", current_lang())
+        )
+      } else {
+        sync_feedback$ai_feedback <- list(
+          available = FALSE,
+          message = translate_text("Please enter and save your API key in Settings", current_lang())
+        )
+      }
+      output$feedback_display <- renderUI({
+        create_feedback_ui(sync_feedback, current_lang)
+      })
+    }
+
     # Scroll to feedback after UI is updated
     shinyjs::delay(500, {
       shinyjs::runjs("
         var feedbackEl = document.getElementById('feedback_display');
         if (feedbackEl) {
-          feedbackEl.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          feedbackEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
           });
         }
       ")
+    })
+  })
+
+  # Handle async API response from JavaScript fetch
+  observeEvent(input$api_response, {
+    response <- input$api_response
+    context <- pending_api_context()
+    feedback <- partial_feedback()
+
+    # Clear pending state
+    pending_api_context(NULL)
+    partial_feedback(NULL)
+
+    if (is.null(feedback)) {
+      return()  # No pending feedback to complete
+    }
+
+    if (response$success) {
+      # Parse the response based on provider
+      ai_result <- parse_api_response(response$data, context$provider, context$model)
+      feedback$ai_feedback <- ai_result
+    } else {
+      feedback$ai_feedback <- list(
+        available = FALSE,
+        message = paste("API Error:", response$error)
+      )
+    }
+
+    # Update UI with complete feedback
+    output$feedback_display <- renderUI({
+      create_feedback_ui(feedback, context$lang)
     })
   })
   
@@ -755,19 +914,13 @@ server <- function(input, output, session) {
   })
 }
 
-# Feedback analysis function
-analyze_code <- function(student_code, exercise, provider = "", api_key = "", model = NULL, lang = "en") {
+# Feedback analysis function (synchronous parts only)
+analyze_code <- function(student_code, exercise) {
   feedback <- list(
     syntax_check = check_syntax(student_code),
     rule_based = check_rules(student_code, exercise),
     ai_feedback = NULL
   )
-
-  # Add AI feedback if provider and key are available
-  if (provider != "" && api_key != "") {
-    feedback$ai_feedback <- get_ai_feedback(student_code, exercise, provider, api_key, model, lang)
-  }
-
   return(feedback)
 }
 
@@ -884,22 +1037,15 @@ check_rules <- function(code, exercise) {
   list(issues = issues, suggestions = suggestions, good_practices = good_practices)
 }
 
-# AI feedback with actual API implementation
-get_ai_feedback <- function(student_code, exercise, provider, api_key, model = NULL, lang = "en") {
-  if (is.null(provider) || provider == "" || is.null(api_key) || api_key == "") {
-    return(list(
-      available = FALSE,
-      message = "Please configure AI provider and API key in Settings"
-    ))
-  }
-
+# Build the prompt for AI feedback
+build_ai_prompt <- function(student_code, exercise, lang = "en") {
   # Create the prompt for the AI
   exercise_context <- ""
   if (!is.null(exercise) && !is.null(exercise$description) && exercise$description != "") {
     exercise_context <- paste("Exercise context:", exercise$description, "\n\n")
   }
 
- # Language-specific instructions
+  # Language-specific instructions
   lang_instruction <- switch(lang,
     "de" = "WICHTIG: Antworte komplett auf Deutsch. Alle Erklärungen, Feedback und Kommentare müssen auf Deutsch sein.",
     "fr" = "IMPORTANT: Réponds entièrement en français. Toutes les explications, commentaires et retours doivent être en français.",
@@ -925,129 +1071,140 @@ get_ai_feedback <- function(student_code, exercise, provider, api_key, model = N
     "- Keep the tone supportive and educational"
   )
 
-  tryCatch({
-    if (provider == "openai") {
-      return(call_openai_api(prompt, api_key))
-    } else if (provider == "anthropic") {
-      return(call_anthropic_api(prompt, api_key))
-    } else if (provider == "openrouter") {
-      return(call_openrouter_api(prompt, api_key, model))
-    } else {
-      return(list(
-        available = FALSE,
-        message = "Unsupported AI provider"
-      ))
-    }
-  }, error = function(e) {
-    return(list(
-      available = FALSE,
-      message = paste("AI API Error:", e$message)
-    ))
-  })
+  return(prompt)
 }
 
-# OpenAI API call
-call_openai_api <- function(prompt, api_key) {
-  tryCatch({
-    response <- request("https://api.openai.com/v1/chat/completions") |>
-      req_headers(
+# Prepare API request parameters for JavaScript fetch
+prepare_api_request <- function(student_code, exercise, provider, api_key, model = NULL, lang = "en") {
+  prompt <- build_ai_prompt(student_code, exercise, lang)
+
+  # Generate unique request ID
+  request_id <- paste0("req_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
+
+  if (provider == "openai") {
+    return(list(
+      url = "https://api.openai.com/v1/chat/completions",
+      headers = list(
         "Authorization" = paste("Bearer", api_key),
         "Content-Type" = "application/json"
-      ) |>
-      req_body_json(list(
+      ),
+      body = list(
         model = "gpt-4o-mini",
         messages = list(
           list(role = "user", content = prompt)
         ),
-        max_tokens = 1000,
+        max_tokens = 1000L,
         temperature = 0.7
-      )) |>
-      req_timeout(30) |>
-      req_perform()
-    
-    if (resp_status(response) == 200) {
-      result <- resp_body_json(response)
+      ),
+      requestId = request_id
+    ))
+  } else if (provider == "anthropic") {
+    return(list(
+      url = "https://api.anthropic.com/v1/messages",
+      headers = list(
+        "x-api-key" = api_key,
+        "Content-Type" = "application/json",
+        "anthropic-version" = "2023-06-01"
+      ),
+      body = list(
+        model = "claude-3-haiku-20240307",
+        max_tokens = 1000L,
+        messages = list(
+          list(role = "user", content = prompt)
+        )
+      ),
+      requestId = request_id
+    ))
+  } else if (provider == "openrouter") {
+    if (is.null(model) || model == "") {
+      model <- "deepseek/deepseek-chat"
+    }
+    return(list(
+      url = "https://openrouter.ai/api/v1/chat/completions",
+      headers = list(
+        "Authorization" = paste("Bearer", api_key),
+        "Content-Type" = "application/json",
+        "HTTP-Referer" = "https://github.com/umatter/inffer_feedback_app",
+        "X-Title" = "WDDA R Code Feedback App"
+      ),
+      body = list(
+        model = model,
+        messages = list(
+          list(role = "user", content = prompt)
+        ),
+        max_tokens = 1000L,
+        temperature = 0.7
+      ),
+      requestId = request_id
+    ))
+  }
 
-      # Validate response structure
-      if (!is.null(result$choices) &&
-          length(result$choices) > 0 &&
-          !is.null(result$choices[[1]]$message$content)) {
-        feedback_text <- result$choices[[1]]$message$content
+  return(NULL)
+}
+
+# Parse API response based on provider
+parse_api_response <- function(data, provider, model = NULL) {
+  tryCatch({
+    if (provider == "openai") {
+      if (!is.null(data$choices) &&
+          length(data$choices) > 0 &&
+          !is.null(data$choices[[1]]$message$content)) {
+        feedback_text <- data$choices[[1]]$message$content
         return(list(
           available = TRUE,
           message = feedback_text,
           provider = "OpenAI GPT-4o-mini"
         ))
-      } else {
-        return(list(
-          available = FALSE,
-          message = "OpenAI API Error: Unexpected response format"
-        ))
       }
-    } else {
-      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
-      return(list(
-        available = FALSE,
-        message = paste("OpenAI API Error:", error_info$error$message %||% "Unknown error")
-      ))
-    }
-  }, error = function(e) {
-    return(list(
-      available = FALSE,
-      message = paste("OpenAI API Error:", e$message)
-    ))
-  })
-}
-
-# Anthropic API call  
-call_anthropic_api <- function(prompt, api_key) {
-  tryCatch({
-    response <- request("https://api.anthropic.com/v1/messages") |>
-      req_headers(
-        "x-api-key" = api_key,
-        "Content-Type" = "application/json",
-        "anthropic-version" = "2023-06-01"
-      ) |>
-      req_body_json(list(
-        model = "claude-3-haiku-20240307",
-        max_tokens = 1000,
-        messages = list(
-          list(role = "user", content = prompt)
-        )
-      )) |>
-      req_timeout(30) |>
-      req_perform()
-    
-    if (resp_status(response) == 200) {
-      result <- resp_body_json(response)
-
-      # Validate response structure
-      if (!is.null(result$content) &&
-          length(result$content) > 0 &&
-          !is.null(result$content[[1]]$text)) {
-        feedback_text <- result$content[[1]]$text
+    } else if (provider == "anthropic") {
+      if (!is.null(data$content) &&
+          length(data$content) > 0 &&
+          !is.null(data$content[[1]]$text)) {
+        feedback_text <- data$content[[1]]$text
         return(list(
           available = TRUE,
           message = feedback_text,
           provider = "Anthropic Claude-3-Haiku"
         ))
-      } else {
+      }
+    } else if (provider == "openrouter") {
+      if (!is.null(data$choices) &&
+          length(data$choices) > 0 &&
+          !is.null(data$choices[[1]]$message$content)) {
+        feedback_text <- data$choices[[1]]$message$content
+        # Strip thinking content
+        feedback_text <- strip_thinking_content(feedback_text)
+
+        # Get display name for model
+        model_display_name <- switch(model %||% "unknown",
+          "qwen/qwen-2.5-coder-32b-instruct" = "Qwen 2.5 Coder 32B",
+          "deepseek/deepseek-chat" = "DeepSeek V3",
+          "deepseek/deepseek-chat-v3-0324:free" = "DeepSeek V3 (Free)",
+          "google/gemini-2.0-flash-exp:free" = "Gemini 2.0 Flash (Free)",
+          "meta-llama/llama-3.3-70b-instruct" = "Llama 3.3 70B",
+          "mistralai/mistral-large-2411" = "Mistral Large",
+          "anthropic/claude-3.5-haiku" = "Claude 3.5 Haiku",
+          "openai/gpt-4o-mini" = "GPT-4o Mini",
+          model %||% "Unknown"
+        )
+
         return(list(
-          available = FALSE,
-          message = "Anthropic API Error: Unexpected response format"
+          available = TRUE,
+          message = feedback_text,
+          provider = paste("OpenRouter:", model_display_name)
         ))
       }
-    } else {
-      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
-      return(list(
-        available = FALSE,
-        message = paste("Anthropic API Error:", error_info$error$message %||% "Unknown error")
-      ))
     }
+
+    # If we get here, response format was unexpected
+    return(list(
+      available = FALSE,
+      message = "API Error: Unexpected response format"
+    ))
   }, error = function(e) {
     return(list(
       available = FALSE,
-      message = paste("Anthropic API Error:", e$message)
+      message = paste("API Error:", e$message)
     ))
   })
 }
@@ -1117,86 +1274,6 @@ strip_thinking_content <- function(text) {
   }
 
   return(trimws(text))
-}
-
-# OpenRouter API call (supports multiple models)
-call_openrouter_api <- function(prompt, api_key, model = "deepseek/deepseek-chat") {
-  if (is.null(model) || model == "") {
-    model <- "deepseek/deepseek-chat"
-  }
-
-  # Extract human-readable model name for display
-  model_display_name <- switch(model,
-    "qwen/qwen-2.5-coder-32b-instruct" = "Qwen 2.5 Coder 32B",
-    "deepseek/deepseek-chat" = "DeepSeek V3",
-    "deepseek/deepseek-chat-v3-0324:free" = "DeepSeek V3 (Free)",
-    "google/gemini-2.0-flash-exp:free" = "Gemini 2.0 Flash (Free)",
-    "meta-llama/llama-3.3-70b-instruct" = "Llama 3.3 70B",
-    "mistralai/mistral-large-2411" = "Mistral Large",
-    "anthropic/claude-3.5-haiku" = "Claude 3.5 Haiku",
-    "openai/gpt-4o-mini" = "GPT-4o Mini",
-    model  # fallback to model ID
-  )
-
-  tryCatch({
-    response <- request("https://openrouter.ai/api/v1/chat/completions") |>
-      req_headers(
-        "Authorization" = paste("Bearer", api_key),
-        "Content-Type" = "application/json",
-        "HTTP-Referer" = "https://github.com/umatter/inffer_feedback_app",
-        "X-Title" = "WDDA R Code Feedback App"
-      ) |>
-      req_body_json(list(
-        model = model,
-        messages = list(
-          list(role = "user", content = prompt)
-        ),
-        max_tokens = 1000,
-        temperature = 0.7,
-        # Disable extended thinking/reasoning for models that support it
-        # This prevents reasoning tokens from appearing in the response
-        reasoning = list(exclude = TRUE)
-      )) |>
-      req_timeout(60) |>  # longer timeout for OpenRouter routing
-      req_perform()
-
-    if (resp_status(response) == 200) {
-      result <- resp_body_json(response)
-
-      # OpenRouter uses OpenAI-compatible response format
-      if (!is.null(result$choices) &&
-          length(result$choices) > 0 &&
-          !is.null(result$choices[[1]]$message$content)) {
-        feedback_text <- result$choices[[1]]$message$content
-        # Strip any thinking/reasoning content that some models output
-        feedback_text <- strip_thinking_content(feedback_text)
-        return(list(
-          available = TRUE,
-          message = feedback_text,
-          provider = paste("OpenRouter:", model_display_name)
-        ))
-      } else {
-        return(list(
-          available = FALSE,
-          message = "OpenRouter API Error: Unexpected response format"
-        ))
-      }
-    } else {
-      error_info <- tryCatch(resp_body_json(response), error = function(e) list())
-      error_msg <- error_info$error$message %||%
-                   error_info$error$code %||%
-                   "Unknown error"
-      return(list(
-        available = FALSE,
-        message = paste("OpenRouter API Error:", error_msg)
-      ))
-    }
-  }, error = function(e) {
-    return(list(
-      available = FALSE,
-      message = paste("OpenRouter API Error:", e$message)
-    ))
-  })
 }
 
 # Create feedback UI

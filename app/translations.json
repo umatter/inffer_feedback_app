@@ -226,6 +226,21 @@
       "de": "Analysiere Ihren Code... Bitte warten Sie, dies kann einige Momente dauern.",
       "fr": "Analyse de votre code... Veuillez patienter, cela peut prendre quelques instants."
     },
+    "Getting AI feedback...": {
+      "en": "Getting AI feedback...",
+      "de": "KI-Feedback wird abgerufen...",
+      "fr": "Récupération du feedback IA..."
+    },
+    "Please configure AI provider and API key in Settings": {
+      "en": "Please configure AI provider and API key in Settings",
+      "de": "Bitte konfigurieren Sie den KI-Anbieter und den API-Schlüssel in den Einstellungen",
+      "fr": "Veuillez configurer le fournisseur IA et la clé API dans les paramètres"
+    },
+    "Please enter and save your API key in Settings": {
+      "en": "Please enter and save your API key in Settings",
+      "de": "Bitte geben Sie Ihren API-Schlüssel in den Einstellungen ein und speichern Sie ihn",
+      "fr": "Veuillez entrer et enregistrer votre clé API dans les paramètres"
+    },
     "Click 'Analyze Code' to get feedback on your R code.": {
       "en": "Click 'Analyze Code' to get feedback on your R code.",
       "de": "Klicken Sie auf 'Code analysieren', um Feedback zu Ihrem R-Code zu erhalten.",

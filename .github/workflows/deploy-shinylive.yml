@@ -39,7 +39,6 @@ jobs:
           any::bslib
           any::shinyjs
           any::jsonlite
-          any::httr2
           any::markdown
         needs: |
           shinylive
