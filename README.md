@@ -68,10 +68,16 @@ API keys are stored in memory only and never saved.
 - Code only sent to LLM APIs for analysis
 - GDPR compliant by design
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details.
+This project uses dual licensing to support its role as an Open Educational Resource (OER):
 
----
+- **Code** (R scripts, configuration files, etc.): [MIT License](LICENSE)
 
-*Developed for BFH - Berner Fachhochschule*
+- **Educational Content** (documentation, courseware, learning materials): [CC BY-SA 4.0](LICENSE-CONTENT)
+
+
+
+## 🙏 Acknowledgments
+
+This project is supported by the BFH E-Learning funding program (virtuelle-akademie.ch).
