@@ -81,3 +81,7 @@ This project uses dual licensing to support its role as an Open Educational Reso
 ## 🙏 Acknowledgments
 
 This project is supported by the BFH E-Learning funding program (virtuelle-akademie.ch).
+
+---
+
+**AI tools used:** Claude Code (Sonnet 4.5, Opus 4.5) for app framework, testing, deployment, bug fixing, CSS styling, Beamer setup.
