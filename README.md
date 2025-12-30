@@ -2,86 +2,85 @@
 
 An AI-powered Shiny application that provides automated feedback on R code submissions for the BFH Working with Data and Data Analysis (WDDA) course.
 
+**Live Demo:** https://umatter.github.io/inffer_feedback_app
+
 ## Features
 
-- 🤖 **AI-Powered Feedback**: Integration with OpenAI and Anthropic LLM providers
-- 📚 **Exercise Library**: Built-in exercises covering WDDA course topics
-- 📝 **Custom Exercises**: Upload your own exercises with reference solutions
-- 🎓 **Pedagogical Framework**: Research-based feedback using Hattie & Timperley model
-- 🔒 **Privacy-First**: No user accounts, session-only data storage
-- 🎨 **BFH Design**: Corporate design compliance with accessibility features
+- **AI-Powered Feedback**: LLM-based code analysis via OpenRouter, OpenAI, or Anthropic APIs
+- **Multi-Model Support**: Choose from various models (Qwen Coder, DeepSeek, GPT-4o, Claude, etc.)
+- **Syntax Validation**: Immediate R syntax checking before AI analysis
+- **Multi-Language UI**: German, French, and English interface
+- **Custom Exercises**: Upload your own exercises with reference solutions
+- **Screenshot Paste**: Paste images directly for context (Ctrl+V)
+- **Privacy-First**: No user accounts, session-only data, runs entirely in browser
+- **BFH Design**: Corporate design compliance with accessibility features
 
-## Deployment
+Note: The app includes a few demo exercises for testing purposes. For course use, instructors typically provide custom exercises.
 
-### GitHub Pages (Automatic)
+## Live Deployment
 
-1. **Enable GitHub Pages**: Go to repository Settings → Pages → Source: "GitHub Actions"
+The app runs entirely client-side via webR/Shinylive - no backend server required. Deployment is automatic via GitHub Actions on push to `main`.
 
-2. **Push to main branch**: The GitHub Actions workflow will automatically:
-   - Install R and required packages
-   - Convert the Shiny app to Shinylive format
-   - Deploy to GitHub Pages
+**Deployed at:** `https://[username].github.io/[repository-name]/`
 
-3. **Access the app**: Available at `https://[username].github.io/[repository-name]/`
+### GitHub Pages Setup
 
-### Local Development
+1. Go to repository Settings → Pages → Source: "GitHub Actions"
+2. Push to `main` branch - the workflow handles the rest
+
+## Local Development
 
 ```bash
 # Install required R packages
-Rscript -e "install.packages(c('shiny', 'shinydashboard', 'shinyjs', 'DT', 'jsonlite', 'httr2'))"
+Rscript -e "install.packages(c('shiny', 'bslib', 'shinyjs', 'jsonlite', 'markdown'))"
 
 # Run the app
-Rscript -e "shiny::runApp('app.R', port=3838)"
+Rscript -e "shiny::runApp('app', port=3838)"
 ```
 
-### Manual Shinylive Export
+### Test Shinylive Export Locally
 
 ```r
 # Install shinylive
 install.packages("shinylive")
 
-# Export to static files
-shinylive::export(
-  appdir = ".",
-  destdir = "docs"
-)
+# Export and serve
+shinylive::export("app", "_site")
+httpuv::runStaticServer("_site")
 ```
 
 ## Usage
 
-1. **Setup**: Select LLM provider and enter API key
-2. **Submit Code**: Choose exercise and enter R code
-3. **Get Feedback**: Receive multi-layer analysis and suggestions
-4. **Custom Exercises**: Upload your own exercises for personalized feedback
+1. **Setup**: Select LLM provider and enter API key in Settings
+2. **Select Exercise**: Choose a demo exercise or upload a custom one
+3. **Enter Code**: Write or paste your R code solution
+4. **Get Feedback**: Receive syntax validation and AI-powered feedback
 
 ## API Keys
 
+- **OpenRouter** (recommended): Get from [openrouter.ai/keys](https://openrouter.ai/keys) - access to multiple models
 - **OpenAI**: Get from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 - **Anthropic**: Get from [console.anthropic.com](https://console.anthropic.com)
 
-API keys are stored in memory only and never saved.
+API keys are stored in session memory only and never persisted.
 
 ## Privacy
 
 - No user registration or login required
-- Session-based progress tracking only
-- Code only sent to LLM APIs for analysis
+- All code runs in browser via WebAssembly
+- Code only sent to LLM APIs when requesting AI feedback
+- No server-side storage of student submissions
 - GDPR compliant by design
 
-## 📄 License
+## License
 
 This project uses dual licensing to support its role as an Open Educational Resource (OER):
 
-- **Code** (R scripts, configuration files, etc.): [MIT License](LICENSE)
+- **Code** (R scripts, configuration files): [MIT License](LICENSE)
+- **Educational Content** (documentation, courseware): [CC BY-SA 4.0](LICENSE-CONTENT)
 
-- **Educational Content** (documentation, courseware, learning materials): [CC BY-SA 4.0](LICENSE-CONTENT)
-
-
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 This project is supported by the BFH E-Learning funding program (virtuelle-akademie.ch).
-
----
 
 **AI tools used:** Claude Code (Sonnet 4.5, Opus 4.5) for app framework, testing, deployment, bug fixing, CSS styling, Beamer setup.
