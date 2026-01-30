@@ -1,0 +1,109 @@
+{
+  "exercises": {
+    "data_import_excel": {
+      "title": "Import Excel Data",
+      "description": "Import data from an Excel file and explore its structure using readxl package",
+      "task": "Load the Excel file 'students_data.xlsx' using readxl, then display the structure and first few rows",
+      "reference_solution": "library(readxl)\nstudents <- read_excel('students_data.xlsx')\nstr(students)\nhead(students)",
+      "category": "Data Import",
+      "difficulty": "Beginner"
+    },
+    "data_exploration": {
+      "title": "Data Structure Exploration",
+      "description": "Explore the structure and properties of a dataset",
+      "task": "Use str(), names(), dim(), and summary() to explore the dataset structure",
+      "reference_solution": "str(students)\nnames(students)\ndim(students)\nsummary(students)",
+      "category": "Data Import",
+      "difficulty": "Beginner"
+    },
+    "descriptive_stats_basic": {
+      "title": "Basic Descriptive Statistics",
+      "description": "Calculate central tendency measures for numeric variables",
+      "task": "Calculate the mean, median, and mode for the 'score' variable, handling missing values",
+      "reference_solution": "mean(students$score, na.rm = TRUE)\nmedian(students$score, na.rm = TRUE)\n# Mode calculation\ntable(students$score) |> which.max() |> names()",
+      "category": "Descriptive Statistics",
+      "difficulty": "Beginner"
+    },
+    "descriptive_stats_spread": {
+      "title": "Measures of Variability",
+      "description": "Calculate dispersion measures to understand data spread",
+      "task": "Calculate range, variance, standard deviation, and quartiles for the 'score' variable",
+      "reference_solution": "range(students$score, na.rm = TRUE)\nvar(students$score, na.rm = TRUE)\nsd(students$score, na.rm = TRUE)\nquantile(students$score, na.rm = TRUE)",
+      "category": "Descriptive Statistics",
+      "difficulty": "Intermediate"
+    },
+    "histogram_basic": {
+      "title": "Create a Histogram",
+      "description": "Visualize the distribution of a continuous variable using histogram",
+      "task": "Create a histogram of student scores with proper titles and labels",
+      "reference_solution": "hist(students$score,\n     main = 'Distribution of Student Scores',\n     xlab = 'Score',\n     ylab = 'Frequency',\n     col = 'skyblue',\n     breaks = 10)",
+      "category": "Data Visualization",
+      "difficulty": "Beginner"
+    },
+    "boxplot_comparison": {
+      "title": "Boxplot for Group Comparison",
+      "description": "Compare distributions across groups using boxplots",
+      "task": "Create a boxplot comparing scores by student major",
+      "reference_solution": "boxplot(score ~ major, \n        data = students,\n        main = 'Scores by Major',\n        xlab = 'Major',\n        ylab = 'Score',\n        col = c('lightblue', 'lightgreen', 'lightcoral'))",
+      "category": "Data Visualization",
+      "difficulty": "Intermediate"
+    },
+    "pipe_filtering": {
+      "title": "Data Filtering with Pipes",
+      "description": "Use pipe operators for readable data filtering operations",
+      "task": "Filter students with scores > 80 and select name, major, and score columns using pipes",
+      "reference_solution": "library(dplyr)\nstudents |>\n  filter(score > 80) |>\n  select(name, major, score)",
+      "category": "Data Manipulation",
+      "difficulty": "Intermediate"
+    },
+    "pipe_summarizing": {
+      "title": "Data Summarization with Pipes",
+      "description": "Create summary statistics by groups using pipe operations",
+      "task": "Group by major and calculate mean and median scores for each group",
+      "reference_solution": "students |>\n  group_by(major) |>\n  summarise(\n    mean_score = mean(score, na.rm = TRUE),\n    median_score = median(score, na.rm = TRUE),\n    n = n()\n  )",
+      "category": "Data Manipulation",
+      "difficulty": "Advanced"
+    },
+    "data_mutate": {
+      "title": "Creating New Variables",
+      "description": "Add new calculated variables to your dataset",
+      "task": "Create a new variable 'grade' based on score (A: 90+, B: 80-89, C: 70-79, D: <70)",
+      "reference_solution": "students <- students |>\n  mutate(\n    grade = case_when(\n      score >= 90 ~ 'A',\n      score >= 80 ~ 'B',\n      score >= 70 ~ 'C',\n      TRUE ~ 'D'\n    )\n  )",
+      "category": "Data Manipulation",
+      "difficulty": "Advanced"
+    },
+    "barplot_categorical": {
+      "title": "Bar Chart for Categories",
+      "description": "Visualize categorical data using bar charts",
+      "task": "Create a bar chart showing the count of students by major",
+      "reference_solution": "major_counts <- table(students$major)\nbarplot(major_counts,\n        main = 'Number of Students by Major',\n        xlab = 'Major',\n        ylab = 'Count',\n        col = rainbow(length(major_counts)))",
+      "category": "Data Visualization",
+      "difficulty": "Beginner"
+    },
+    "correlation_analysis": {
+      "title": "Correlation Analysis",
+      "description": "Examine relationships between numeric variables",
+      "task": "Calculate correlation between study_hours and score variables",
+      "reference_solution": "cor(students$study_hours, students$score, use = 'complete.obs')\n# Create scatter plot\nplot(students$study_hours, students$score,\n     main = 'Study Hours vs Score',\n     xlab = 'Study Hours',\n     ylab = 'Score',\n     pch = 16,\n     col = 'blue')",
+      "category": "Statistical Analysis",
+      "difficulty": "Advanced"
+    },
+    "missing_data": {
+      "title": "Handling Missing Data",
+      "description": "Identify and handle missing values in your dataset",
+      "task": "Check for missing values and calculate statistics excluding them",
+      "reference_solution": "# Check for missing values\nsum(is.na(students$score))\n# Remove missing values\nstudents_clean <- students |>\n  filter(!is.na(score))\n# Or use na.rm in calculations\nmean(students$score, na.rm = TRUE)",
+      "category": "Data Cleaning",
+      "difficulty": "Intermediate"
+    }
+  },
+  "categories": [
+    "Data Import",
+    "Descriptive Statistics",
+    "Data Visualization",
+    "Data Manipulation",
+    "Statistical Analysis",
+    "Data Cleaning"
+  ],
+  "difficulties": ["Beginner", "Intermediate", "Advanced"]
+}

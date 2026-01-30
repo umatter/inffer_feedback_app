@@ -22,3 +22,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Temporarily excluded from commits
+code_review_report.md
+CLAUDE.md
+CONTRIBUTING.md

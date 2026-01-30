@@ -12,24 +12,37 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Setup R
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: '4.3.0'
-        
+
+    # Cache R packages for faster builds
+    - name: Cache R packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/renv
+          ~/.R/library
+          ${{ env.R_LIBS_USER }}
+        key: ${{ runner.os }}-r-4.3.0-${{ hashFiles('DESCRIPTION') }}
+        restore-keys: |
+          ${{ runner.os }}-r-4.3.0-
+
     - name: Setup R dependencies
       uses: r-lib/actions/setup-r-dependencies@v2
       with:
@@ -42,7 +55,7 @@ jobs:
           any::markdown
         needs: |
           shinylive
-          
+
     - name: Create Shinylive app
       run: |
         R -e "
@@ -50,29 +63,123 @@ jobs:
         if (!require('shinylive', quietly = TRUE)) {
           install.packages('shinylive', repos = 'https://cran.rstudio.com/')
         }
-        
+
         # Export the Shiny app to Shinylive
         shinylive::export(
           appdir = 'app',
           destdir = '_site'
         )
         "
-        
+
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: _site
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
+    # Upload artifact for PR preview
+    - name: Upload PR preview artifact
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: shinylive-preview-${{ github.event.pull_request.number }}
+        path: _site
+        retention-days: 7
+
+  # PR Preview comment
+  preview-comment:
+    if: github.event_name == 'pull_request'
     needs: build
     runs-on: ubuntu-latest
-    
+    steps:
+      - name: Comment PR with build status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = `## Shinylive Build Status
+
+            The Shinylive app has been built successfully for this PR.
+
+            **Build artifacts:** [View artifacts](${runUrl})
+
+            To preview locally:
+            1. Download the \`shinylive-preview-${prNumber}\` artifact
+            2. Extract and run: \`npx http-server _site\`
+
+            ---
+            *This comment is automatically updated on each push.*`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Shinylive Build Status')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-      
+
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+
+  # Run tests on PR
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.3.0'
+
+    - name: Cache R packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/renv
+          ~/.R/library
+        key: ${{ runner.os }}-r-test-${{ hashFiles('DESCRIPTION') }}
+        restore-keys: |
+          ${{ runner.os }}-r-test-
+
+    - name: Install test dependencies
+      run: |
+        Rscript -e "install.packages(c('testthat', 'jsonlite'), repos = 'https://cloud.r-project.org')"
+
+    - name: Run tests
+      run: |
+        Rscript -e "testthat::test_dir('tests/testthat', reporter = 'summary')"

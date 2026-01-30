@@ -1,0 +1,360 @@
+# API integration functions for R Code Feedback App
+# Contains LLM API request/response handling and prompt building
+
+# =============================================================================
+# Request ID Generation
+# =============================================================================
+
+#' Generate unique request ID for API call tracking
+#'
+#' @return Character string with unique request ID
+#' @details Uses UUID-style generation for guaranteed uniqueness
+generate_request_id <- function() {
+  # Generate UUID-style ID: timestamp + random hex
+  timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
+  random_hex <- paste(sprintf("%02x", sample(0:255, 8, replace = TRUE)), collapse = "")
+  paste0("req_", timestamp, "_", random_hex)
+}
+
+# =============================================================================
+# API Key Validation
+# =============================================================================
+
+#' Validate API key format for a given provider
+#'
+#' @param key Character string containing the API key
+#' @param provider Provider name ("openai", "anthropic", "openrouter")
+#' @return List with 'valid' (logical) and 'message' (character)
+#'
+#' @examples
+#' validate_api_key("sk-abc123", "openai")
+#' validate_api_key("sk-or-abc123", "openrouter")
+validate_api_key <- function(key, provider) {
+  key <- trimws(key)
+  if (nchar(key) == 0) {
+    return(list(valid = FALSE, message = "API key is required"))
+  }
+
+  pattern <- API_KEY_PATTERNS[[provider]]
+  if (!is.null(pattern) && !grepl(pattern, key)) {
+    prefix <- switch(provider,
+      "openai" = "sk-",
+      "anthropic" = "sk-ant-",
+      "openrouter" = "sk-or-",
+      ""
+    )
+    return(list(valid = FALSE, message = paste0(
+      tools::toTitleCase(provider), " API keys should start with '", prefix, "'"
+    )))
+  }
+
+  return(list(valid = TRUE, message = ""))
+}
+
+# =============================================================================
+# Prompt Building
+# =============================================================================
+
+#' Build the prompt for AI feedback
+#'
+#' @param student_code Character string containing R code to analyze
+#' @param exercise Exercise context list with description
+#' @param lang Language code for response ("en", "de", "fr")
+#' @return Character string containing the complete prompt
+build_ai_prompt <- function(student_code, exercise, lang = "en") {
+  exercise_context <- ""
+  if (!is.null(exercise) && !is.null(exercise$description) && exercise$description != "") {
+    exercise_context <- paste("Exercise context:", exercise$description, "\n\n")
+  }
+
+  # Language-specific instructions
+  lang_instruction <- switch(lang,
+    "de" = "WICHTIG: Antworte komplett auf Deutsch. Alle Erkl\u00e4rungen, Feedback und Kommentare m\u00fcssen auf Deutsch sein.",
+    "fr" = "IMPORTANT: R\u00e9ponds enti\u00e8rement en fran\u00e7ais. Toutes les explications, commentaires et retours doivent \u00eatre en fran\u00e7ais.",
+    "IMPORTANT: Respond entirely in English."
+  )
+
+  prompt <- paste0(
+    "You are an R programming tutor providing constructive feedback to students learning R programming.\n\n",
+    lang_instruction, "\n\n",
+    exercise_context,
+    "Student's R code:\n```r\n", student_code, "\n```\n\n",
+    "Provide helpful, encouraging feedback that covers:\n",
+    "1. **Code Analysis**: Review correctness, identify any errors, and suggest fixes\n",
+    "2. **Best Practices**: Highlight good coding habits and suggest style improvements\n",
+    "3. **Learning Opportunities**: Point out clever solutions or suggest alternative approaches\n",
+    "4. **Next Steps**: Recommend what the student could explore next to improve their R skills\n\n",
+    "IMPORTANT FORMATTING RULES:\n",
+    "- Output ONLY the feedback itself - do NOT include any thinking, reasoning, or planning\n",
+    "- Start directly with a friendly greeting and the feedback content\n",
+    "- Do NOT write phrases like 'Let me analyze...' or 'I need to...' or 'Okay, let me...'\n",
+    "- Use markdown formatting (headers, bullet points, code blocks)\n",
+    "- Start with positive observations\n",
+    "- Keep the tone supportive and educational"
+  )
+
+  return(prompt)
+}
+
+# =============================================================================
+# API Request Preparation
+# =============================================================================
+
+#' Prepare API request parameters for JavaScript fetch
+#'
+#' @param student_code Character string containing R code
+#' @param exercise Exercise context list
+#' @param provider Provider name
+#' @param api_key API key string
+#' @param model Model ID (for OpenRouter)
+#' @param lang Language code
+#' @return List with url, headers, body, and requestId for fetch call
+prepare_api_request <- function(student_code, exercise, provider, api_key, model = NULL, lang = "en") {
+  prompt <- build_ai_prompt(student_code, exercise, lang)
+  request_id <- generate_request_id()
+
+  if (provider == "openai") {
+    return(list(
+      url = LLM_PROVIDERS$openai$api_endpoint,
+      headers = list(
+        "Authorization" = paste("Bearer", api_key),
+        "Content-Type" = "application/json"
+      ),
+      body = list(
+        model = LLM_PROVIDERS$openai$model,
+        messages = list(
+          list(role = "user", content = prompt)
+        ),
+        max_tokens = DEFAULT_MAX_TOKENS,
+        temperature = DEFAULT_TEMPERATURE
+      ),
+      requestId = request_id
+    ))
+  } else if (provider == "anthropic") {
+    return(list(
+      url = LLM_PROVIDERS$anthropic$api_endpoint,
+      headers = list(
+        "x-api-key" = api_key,
+        "Content-Type" = "application/json",
+        "anthropic-version" = "2023-06-01"
+      ),
+      body = list(
+        model = LLM_PROVIDERS$anthropic$model,
+        max_tokens = DEFAULT_MAX_TOKENS,
+        messages = list(
+          list(role = "user", content = prompt)
+        )
+      ),
+      requestId = request_id
+    ))
+  } else if (provider == "openrouter") {
+    if (is.null(model) || model == "") {
+      model <- LLM_PROVIDERS$openrouter$default_model
+    }
+
+    # Build base request body
+    body <- list(
+      model = model,
+      messages = list(
+        list(role = "user", content = prompt)
+      ),
+      max_tokens = DEFAULT_MAX_TOKENS,
+      temperature = DEFAULT_TEMPERATURE
+    )
+
+    # Model-specific adjustments
+    # Reasoning models (DeepSeek) - disable extended thinking to get clean output
+    if (grepl("^deepseek/", model)) {
+      body$reasoning <- list(exclude = TRUE)
+    }
+
+    # Models that work better with lower temperature for code feedback
+    if (grepl("qwen.*coder|deepseek", model, ignore.case = TRUE)) {
+      body$temperature <- CODE_MODEL_TEMPERATURE
+    }
+
+    return(list(
+      url = LLM_PROVIDERS$openrouter$api_endpoint,
+      headers = list(
+        "Authorization" = paste("Bearer", api_key),
+        "Content-Type" = "application/json",
+        "HTTP-Referer" = "https://github.com/umatter/inffer_feedback_app",
+        "X-Title" = "WDDA R Code Feedback App"
+      ),
+      body = body,
+      requestId = request_id
+    ))
+  }
+
+  return(NULL)
+}
+
+# =============================================================================
+# Response Parsing
+# =============================================================================
+
+#' Strip thinking/reasoning content from LLM responses
+#'
+#' @param text Character string containing LLM response
+#' @return Cleaned text with thinking blocks removed
+strip_thinking_content <- function(text) {
+  # Step 1: Remove <think>...</think> blocks (used by DeepSeek and others)
+  text <- gsub("(?s)<think>.*?</think>", "", text, perl = TRUE)
+
+  # Step 2: Remove <thinking>...</thinking> blocks
+  text <- gsub("(?s)<thinking>.*?</thinking>", "", text, perl = TRUE)
+
+  # Step 3: Remove common thinking preamble patterns at the start of response
+  thinking_preambles <- c(
+    "^\\s*Okay,?\\s+(let me|I'll|I need|I should|so)[^\\n]*\\n+",
+    "^\\s*Alright,?\\s+(let me|I'll|I need|I should|so)[^\\n]*\\n+",
+    "^\\s*Let me (analyze|look|check|review|examine|think|consider|see|figure)[^\\n]*\\n+",
+    "^\\s*I('ll| will| need to| should)\\s+(analyze|look|check|review|examine|think|consider|see|figure)[^\\n]*\\n+",
+    "^\\s*Looking at (this|the|your)[^\\n]*\\n+",
+    "^\\s*First,? (let me|I'll|I need|I should)[^\\n]*\\n+",
+    "^\\s*So,?\\s+(the|this|looking|let me|I)[^\\n]*\\n+",
+    "^\\s*Hmm,?[^\\n]*\\n+",
+    "^\\s*Now,? (let me|I'll|I need)[^\\n]*\\n+"
+  )
+
+  for (pattern in thinking_preambles) {
+    prev_text <- ""
+    iterations <- 0
+    while (prev_text != text && iterations < 10) {
+      prev_text <- text
+      text <- sub(pattern, "", text, perl = TRUE, ignore.case = TRUE)
+      iterations <- iterations + 1
+    }
+  }
+
+  # Step 4: If text still has thinking content, find where actual feedback starts
+  feedback_starters <- c(
+    "(?m)^Hi[!,]",
+    "(?m)^Hello[!,]",
+    "(?m)^Hey[!,]",
+    "(?m)^Great (job|work|effort|start)",
+    "(?m)^Good (job|work|effort|start)",
+    "(?m)^Nice (job|work|effort|try)",
+    "(?m)^Well done",
+    "(?m)^Thank you",
+    "(?m)^Thanks for",
+    "(?m)^I (see|notice|can see)",
+    "(?m)^## ",
+    "(?m)^# ",
+    "(?m)^\\*\\*",
+    "(?m)^Your (code|solution|approach)",
+    "(?m)^The (code|solution)",
+    "(?m)^This (code|looks|is)"
+  )
+
+  for (pattern in feedback_starters) {
+    match <- regexpr(pattern, text, perl = TRUE)
+    if (match[1] > 1 && match[1] < 500) {
+      text <- substr(text, match[1], nchar(text))
+      break
+    }
+  }
+
+  return(trimws(text))
+}
+
+#' Parse API response based on provider
+#'
+#' @param data Response data from API
+#' @param provider Provider name
+#' @param model Model ID (for display name)
+#' @return List with 'available', 'message', and optionally 'provider' fields
+parse_api_response <- function(data, provider, model = NULL) {
+  tryCatch({
+    if (provider == "openai") {
+      if (!is.null(data$choices) &&
+          length(data$choices) > 0 &&
+          !is.null(data$choices[[1]]$message$content)) {
+        feedback_text <- data$choices[[1]]$message$content
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = paste("OpenAI", LLM_PROVIDERS$openai$model)
+        ))
+      }
+    } else if (provider == "anthropic") {
+      if (!is.null(data$content) &&
+          length(data$content) > 0 &&
+          !is.null(data$content[[1]]$text)) {
+        feedback_text <- data$content[[1]]$text
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = "Anthropic Claude-3-Haiku"
+        ))
+      }
+    } else if (provider == "openrouter") {
+      if (!is.null(data$choices) &&
+          length(data$choices) > 0 &&
+          !is.null(data$choices[[1]]$message$content)) {
+        feedback_text <- data$choices[[1]]$message$content
+        feedback_text <- strip_thinking_content(feedback_text)
+
+        # Get display name for model
+        model_display <- LLM_PROVIDERS$openrouter$available_models[[model]]
+        if (is.null(model_display)) {
+          model_display <- model %||% "Unknown"
+        }
+
+        return(list(
+          available = TRUE,
+          message = feedback_text,
+          provider = paste("OpenRouter:", model_display)
+        ))
+      }
+    }
+
+    # Unexpected response format
+    return(list(
+      available = FALSE,
+      message = "API Error: Unexpected response format"
+    ))
+  }, error = function(e) {
+    return(list(
+      available = FALSE,
+      message = paste("API Error:", e$message)
+    ))
+  })
+}
+
+# =============================================================================
+# Error Message Helpers
+# =============================================================================
+
+#' Get user-friendly error message from API error
+#'
+#' @param error_msg Raw error message
+#' @param status_code HTTP status code (if available)
+#' @return User-friendly error message
+get_friendly_error_message <- function(error_msg, status_code = NULL) {
+  if (!is.null(status_code)) {
+    if (status_code == 401) {
+      return("Invalid API key. Please check your key in Settings.")
+    } else if (status_code == 429) {
+      return("Rate limit exceeded. Please wait a moment and try again.")
+    } else if (status_code == 500 || status_code == 502 || status_code == 503) {
+      return("API service temporarily unavailable. Please try again later.")
+    } else if (status_code == 400) {
+      return("Invalid request. Please check your code and try again.")
+    }
+  }
+
+  # Check for common error patterns in message
+  if (grepl("rate.?limit", error_msg, ignore.case = TRUE)) {
+    return("Rate limit exceeded. Please wait a moment and try again.")
+  }
+  if (grepl("invalid.*key|unauthorized|authentication", error_msg, ignore.case = TRUE)) {
+    return("Invalid API key. Please check your key in Settings.")
+  }
+  if (grepl("timeout|timed.?out", error_msg, ignore.case = TRUE)) {
+    return("Request timed out. Please try again.")
+  }
+
+  # Return original message if no friendly version available
+  return(paste("API Error:", error_msg))
+}

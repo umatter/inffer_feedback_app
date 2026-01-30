@@ -1,9 +1,9 @@
 Package: InfferFeedbackApp
 Title: R Code Feedback App for WDDA Course
 Version: 1.0.0
-Description: An AI-powered Shiny application that provides automated feedback 
+Description: An AI-powered Shiny application that provides automated feedback
     on R code submissions for the BFH WDDA course.
-Depends: 
+Depends:
     R (>= 4.0.0)
 Imports:
     shiny (>= 1.7.0),
@@ -12,7 +12,9 @@ Imports:
     markdown,
     shinyjs
 Suggests:
-    shinylive (>= 0.1.0)
+    shinylive (>= 0.1.0),
+    testthat (>= 3.0.0),
+    shinytest2
 License: MIT
 Encoding: UTF-8
 LazyData: true
