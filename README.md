@@ -9,13 +9,17 @@ An AI-powered Shiny application that provides automated feedback on R code submi
 - **AI-Powered Feedback**: LLM-based code analysis via OpenRouter, OpenAI, or Anthropic APIs
 - **Multi-Model Support**: Choose from various models (Qwen Coder, DeepSeek, GPT-4o, Claude, etc.)
 - **Syntax Validation**: Immediate R syntax checking before AI analysis
+- **Code Execution**: Run R code directly in the browser with console and plot output
+- **Plot Feedback**: AI compares student plots to reference solutions (vision-capable models)
+- **Feedback Export**: Download feedback as Markdown or print as PDF
+- **Diff View**: Side-by-side comparison of student code vs AI suggestions
+- **Custom Exercises**: Upload JSON exercises with reference solutions
 - **Multi-Language UI**: German, French, and English interface
-- **Custom Exercises**: Upload your own exercises with reference solutions
 - **Screenshot Paste**: Paste images directly for context (Ctrl+V)
 - **Privacy-First**: No user accounts, session-only data, runs entirely in browser
 - **BFH Design**: Corporate design compliance with accessibility features
 
-Note: The app includes a few demo exercises for testing purposes. For course use, instructors typically provide custom exercises.
+Note: The app includes demo exercises for testing. For course use, instructors can upload custom exercises via JSON.
 
 ## Live Deployment
 
