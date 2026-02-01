@@ -76,6 +76,13 @@ API keys are stored in session memory only and never persisted.
 - No server-side storage of student submissions
 - GDPR compliant by design
 
+## Documentation
+
+Printable guides are available in the `docs/` folder (EN/DE/FR):
+
+- **Student Guide**: Quick start for students using the app
+- **Instructor Guide**: Setup options, custom exercises, API key management
+
 ## License
 
 This project uses dual licensing to support its role as an Open Educational Resource (OER):
