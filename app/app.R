@@ -301,6 +301,34 @@ ui <- function(request) {
                 # Show exercise details when selected
                 uiOutput("exercise_details_ui")
               )
+            ),
+
+            # Custom Exercise Upload Panel
+            create_bfh_panel(
+              title = textOutput("custom_exercises_title", inline = TRUE),
+              content = tagList(
+                p(textOutput("custom_exercises_help"), class = "text-muted text-small"),
+                fileInput(
+                  "exercise_upload",
+                  NULL,
+                  accept = ".json",
+                  placeholder = "Select JSON file..."
+                ),
+                # Validation status display
+                uiOutput("upload_validation_ui"),
+                # Options
+                checkboxInput(
+                  "replace_builtin",
+                  textOutput("replace_builtin_label", inline = TRUE),
+                  value = FALSE
+                ),
+                # Action buttons
+                div(class = "d-flex gap-2 flex-wrap",
+                    bfh_action_button("apply_exercises", textOutput("apply_text", inline = TRUE), style = "success"),
+                    bfh_action_button("clear_custom_exercises", textOutput("clear_custom_text", inline = TRUE), style = "secondary"),
+                    downloadButton("download_template", textOutput("download_template_text", inline = TRUE), class = "btn btn-info")
+                )
+              )
             )
           ),
 
@@ -381,17 +409,41 @@ ui <- function(request) {
                 width = "100%"
               ),
               br(),
-              div(class = "d-flex gap-2",
+              div(class = "d-flex gap-2 flex-wrap",
                   bfh_action_button(
                     "analyze_code",
                     textOutput("analyze_button_text", inline = TRUE),
                     style = "primary"
                   ),
                   bfh_action_button(
+                    "run_code",
+                    textOutput("run_code_text", inline = TRUE),
+                    style = "success"
+                  ),
+                  bfh_action_button(
                     "clear_code",
                     textOutput("clear_button_text", inline = TRUE),
                     style = "secondary"
                   )
+              )
+            )
+          ),
+
+          # Code Output Panel (conditional)
+          conditionalPanel(
+            condition = "output.has_code_output == true",
+            create_bfh_panel(
+              title = textOutput("code_output_title", inline = TRUE),
+              content = tagList(
+                uiOutput("code_output_display"),
+                # Plot output (conditional) - uses base64 image for webR compatibility
+                conditionalPanel(
+                  condition = "output.has_plot_output == true",
+                  div(class = "code-output-container plot-output mt-3",
+                      div(class = "output-label", textOutput("plot_output_label", inline = TRUE)),
+                      uiOutput("code_plot_output")
+                  )
+                )
               )
             )
           ),
@@ -404,6 +456,22 @@ ui <- function(request) {
                   div(class = "bfh-card-highlight",
                       uiOutput("feedback_display")
                   )
+              ),
+              # Diff View (conditional)
+              conditionalPanel(
+                condition = "output.has_code_diff == true",
+                div(id = "diff_view_container",
+                    h5(textOutput("diff_title", inline = TRUE), class = "bfh-color-2 mt-3"),
+                    uiOutput("diff_display")
+                )
+              ),
+              # Export Buttons
+              conditionalPanel(
+                condition = "output.has_feedback == true",
+                div(class = "export-buttons",
+                    downloadButton("download_markdown", textOutput("download_md_text", inline = TRUE), class = "btn btn-info"),
+                    bfh_action_button("print_pdf", textOutput("print_pdf_text", inline = TRUE), style = "secondary")
+                )
               )
             ),
             highlight = TRUE
@@ -474,6 +542,25 @@ server <- function(input, output, session) {
   partial_feedback <- reactiveVal(NULL)
   api_key_error <- reactiveVal("")
 
+  # Custom exercise upload
+  uploaded_exercises <- reactiveVal(NULL)
+  upload_validation <- reactiveVal(NULL)
+
+  # Code execution
+  code_output <- reactiveVal(NULL)
+  has_code_output <- reactiveVal(FALSE)
+  has_plot_output <- reactiveVal(FALSE)
+  plot_base64 <- reactiveVal(NULL)
+
+
+  # Feedback export & diff
+  last_feedback <- reactiveVal(NULL)
+  last_exercise <- reactiveVal(NULL)
+  last_student_code <- reactiveVal("")
+  suggested_code <- reactiveVal(NULL)
+  has_feedback <- reactiveVal(FALSE)
+  has_code_diff <- reactiveVal(FALSE)
+
   # ---------------------------------------------------------------------------
   # Auto-detect API keys from environment (local development only)
   # ---------------------------------------------------------------------------
@@ -536,6 +623,26 @@ server <- function(input, output, session) {
   output$best_practices_title <- renderText({ translate_text("Best Practices", current_lang()) })
   output$common_mistakes_title <- renderText({ translate_text("Common Mistakes", current_lang()) })
   output$learning_resources_title <- renderText({ translate_text("Learning Resources", current_lang()) })
+
+  # Custom exercise upload translations
+  output$custom_exercises_title <- renderText({ translate_text("Custom Exercises", current_lang()) })
+  output$custom_exercises_help <- renderText({ translate_text("Upload custom exercises JSON file", current_lang()) })
+  output$replace_builtin_label <- renderText({ translate_text("Replace built-in exercises", current_lang()) })
+  output$apply_text <- renderText({ translate_text("Apply", current_lang()) })
+  output$clear_custom_text <- renderText({ translate_text("Clear Custom", current_lang()) })
+  output$download_template_text <- renderText({ translate_text("Download Template", current_lang()) })
+
+  # Code execution translations
+  output$run_code_text <- renderText({ translate_text("Run Code", current_lang()) })
+  output$code_output_title <- renderText({ translate_text("Code Output", current_lang()) })
+  output$plot_output_label <- renderText({ translate_text("Plot Output", current_lang()) })
+
+  # Feedback export translations
+  output$download_md_text <- renderText({ translate_text("Download Markdown", current_lang()) })
+  output$print_pdf_text <- renderText({ translate_text("Print as PDF", current_lang()) })
+
+  # Diff view translations
+  output$diff_title <- renderText({ translate_text("Suggested Code Changes", current_lang()) })
 
   # ---------------------------------------------------------------------------
   # API Key Validation (Real-time)
@@ -671,17 +778,42 @@ server <- function(input, output, session) {
       return()
     }
 
+    # Reset diff view
+    has_code_diff(FALSE)
+    suggested_code(NULL)
+
     # Build exercise context
-    exercise_context <- list(
-      title = "Custom Exercise",
-      description = input$exercise_text,
-      task = input$exercise_text,
-      reference_solution = "",
-      category = "Custom",
-      difficulty = "Unknown",
-      has_image = has_exercise_image(),
-      image_data = if(has_exercise_image()) exercise_image_data() else ""
-    )
+    ex_id <- input$selected_exercise
+    exercises <- current_exercises()
+
+    if (!is.null(ex_id) && ex_id != "" && !is.null(exercises[[ex_id]])) {
+      ex <- exercises[[ex_id]]
+      exercise_context <- list(
+        title = ex$title,
+        description = ex$description,
+        task = ex$task,
+        reference_solution = ex$reference_solution %||% "",
+        category = ex$category,
+        difficulty = ex$difficulty,
+        has_image = has_exercise_image(),
+        image_data = if(has_exercise_image()) exercise_image_data() else ""
+      )
+    } else {
+      exercise_context <- list(
+        title = "Custom Exercise",
+        description = input$exercise_text,
+        task = input$exercise_text,
+        reference_solution = "",
+        category = "Custom",
+        difficulty = "Unknown",
+        has_image = has_exercise_image(),
+        image_data = if(has_exercise_image()) exercise_image_data() else ""
+      )
+    }
+
+    # Store for export
+    last_exercise(exercise_context)
+    last_student_code(input$student_code)
 
     # Run synchronous checks
     sync_feedback <- list(
@@ -721,14 +853,35 @@ server <- function(input, output, session) {
         )
       })
 
-      # Trigger API call
+      # Run student code to capture any generated plot for AI feedback
+      student_plot_result <- execute_code_with_plot(input$student_code)
+      student_plot_base64 <- if (student_plot_result$has_plot) student_plot_result$plot_base64 else NULL
+
+      # Also update the code output display if plot was generated
+      if (student_plot_result$has_plot) {
+        code_output(student_plot_result)
+        plot_base64(student_plot_result$plot_base64)
+        has_code_output(TRUE)
+        has_plot_output(TRUE)
+      }
+
+      # Generate reference plot if exercise has a reference solution
+      reference_plot_base64 <- NULL
+      if (!is.null(exercise_context$reference_solution) &&
+          nchar(trimws(exercise_context$reference_solution)) > 0) {
+        reference_plot_base64 <- generate_reference_plot(exercise_context$reference_solution)
+      }
+
+      # Trigger API call with plot images
       api_params <- prepare_api_request(
         student_code = input$student_code,
         exercise = exercise_context,
         provider = provider,
         api_key = api_key_to_use,
         model = model,
-        lang = current_lang()
+        lang = current_lang(),
+        student_plot_base64 = student_plot_base64,
+        reference_plot_base64 = reference_plot_base64
       )
 
       if (!is.null(api_params)) {
@@ -753,6 +906,11 @@ server <- function(input, output, session) {
         translate_text("Please enter and save your API key in Settings", current_lang())
       }
       sync_feedback$ai_feedback <- list(available = FALSE, message = msg)
+
+      # Store feedback for export (even without AI)
+      last_feedback(sync_feedback)
+      has_feedback(TRUE)
+
       output$feedback_display <- renderUI({
         create_feedback_ui(sync_feedback, current_lang())
       })
@@ -783,15 +941,367 @@ server <- function(input, output, session) {
     if (response$success) {
       ai_result <- parse_api_response(response$data, context$provider, context$model)
       feedback$ai_feedback <- ai_result
+
+      # Extract suggested code for diff view
+      if (ai_result$available && !is.null(ai_result$message)) {
+        sugg <- find_suggested_correction(ai_result$message, last_student_code())
+        if (!is.null(sugg)) {
+          suggested_code(sugg)
+          has_code_diff(TRUE)
+        }
+      }
     } else {
       # Use friendly error message
       friendly_msg <- get_friendly_error_message(response$error, response$status)
       feedback$ai_feedback <- list(available = FALSE, message = friendly_msg)
     }
 
+    # Store feedback for export
+    last_feedback(feedback)
+    has_feedback(TRUE)
+
     output$feedback_display <- renderUI({
       create_feedback_ui(feedback, context$lang)
     })
+  })
+
+  # ---------------------------------------------------------------------------
+  # Custom Exercise Upload Handling
+  # ---------------------------------------------------------------------------
+
+  # Handle file upload
+  observeEvent(input$exercise_upload, {
+    req(input$exercise_upload)
+
+    tryCatch({
+      # Read and parse JSON
+      json_content <- jsonlite::fromJSON(input$exercise_upload$datapath)
+
+      # Validate structure
+      validation <- validate_exercises_json(json_content)
+      upload_validation(validation)
+
+      if (validation$valid) {
+        uploaded_exercises(validation$exercises)
+      } else {
+        uploaded_exercises(NULL)
+      }
+    }, error = function(e) {
+      upload_validation(list(
+        valid = FALSE,
+        exercises = NULL,
+        errors = paste("Invalid JSON:", e$message)
+      ))
+      uploaded_exercises(NULL)
+    })
+  })
+
+  # Display validation status
+  output$upload_validation_ui <- renderUI({
+    val <- upload_validation()
+    if (is.null(val)) return(NULL)
+
+    if (val$valid) {
+      n_exercises <- length(uploaded_exercises())
+      div(class = "upload-validation-status upload-validation-success",
+          tags$i(class = "bi bi-check-circle"), " ",
+          n_exercises, " ", translate_text("exercises loaded successfully", current_lang())
+      )
+    } else {
+      div(class = "upload-validation-status upload-validation-error",
+          tags$i(class = "bi bi-exclamation-triangle"), " ",
+          translate_text("Validation errors", current_lang()), ":",
+          tags$ul(lapply(val$errors, function(e) tags$li(e)))
+      )
+    }
+  })
+
+  # Apply custom exercises
+  observeEvent(input$apply_exercises, {
+    custom <- uploaded_exercises()
+    if (is.null(custom) || length(custom) == 0) {
+      showNotification(translate_text("No custom exercises to apply", current_lang()), type = "warning")
+      return()
+    }
+
+    # Build combined exercise list
+    if (input$replace_builtin) {
+      combined <- custom
+    } else {
+      combined <- modifyList(BUILTIN_EXERCISES, custom)
+    }
+
+    # Update the exercise selector
+    choices <- c("Custom Exercise" = "", setNames(
+      names(combined),
+      sapply(combined, function(x) x$title)
+    ))
+
+    updateSelectInput(session, "selected_exercise", choices = choices)
+    showNotification(paste(length(custom), translate_text("exercises loaded successfully", current_lang())), type = "message")
+  })
+
+  # Clear custom exercises
+  observeEvent(input$clear_custom_exercises, {
+    uploaded_exercises(NULL)
+    upload_validation(NULL)
+
+    # Reset to built-in exercises
+    choices <- c("Custom Exercise" = "", setNames(
+      names(BUILTIN_EXERCISES),
+      sapply(BUILTIN_EXERCISES, function(x) x$title)
+    ))
+
+    updateSelectInput(session, "selected_exercise", choices = choices)
+    showNotification(translate_text("Custom exercises cleared", current_lang()), type = "message")
+  })
+
+  # Download template
+  output$download_template <- downloadHandler(
+    filename = function() {
+      "exercise_template.json"
+    },
+    content = function(file) {
+      template <- generate_exercise_template()
+      writeLines(template, file)
+    },
+    contentType = "application/json"
+  )
+
+  # Get current exercises (built-in + custom)
+  current_exercises <- reactive({
+    custom <- uploaded_exercises()
+    if (!is.null(custom) && length(custom) > 0) {
+      if (isTRUE(input$replace_builtin)) {
+        return(custom)
+      } else {
+        return(modifyList(BUILTIN_EXERCISES, custom))
+      }
+    }
+    return(BUILTIN_EXERCISES)
+  })
+
+  # ---------------------------------------------------------------------------
+  # Code Execution Handling
+  # ---------------------------------------------------------------------------
+
+  observeEvent(input$run_code, {
+    code <- input$student_code
+    if (is.null(code) || nchar(trimws(code)) == 0) {
+      showNotification(translate_text("Please enter some R code to analyze", current_lang()), type = "warning")
+      return()
+    }
+
+    # Show loading indicator
+    has_code_output(TRUE)
+    has_plot_output(FALSE)
+    plot_base64(NULL)
+    code_output(list(running = TRUE))
+
+    # Execute code with plot capture
+    result <- execute_code_with_plot(code)
+    code_output(result)
+
+    # Handle plot if generated
+    if (isTRUE(result$has_plot) && !is.null(result$plot_base64)) {
+      plot_base64(result$plot_base64)
+      has_plot_output(TRUE)
+    }
+  })
+
+  # Display code output
+  output$code_output_display <- renderUI({
+    result <- code_output()
+    if (is.null(result)) return(NULL)
+
+    if (isTRUE(result$running)) {
+      return(div(class = "code-output-container",
+          div(class = "d-flex align-items-center",
+              div(class = "spinner-border spinner-border-sm me-2", role = "status"),
+              span(translate_text("Running code...", current_lang()))
+          )
+      ))
+    }
+
+    elements <- list()
+
+    # Status indicator
+    status_class <- if (result$success) "code-output-success" else "code-output-error"
+
+    # Console output
+    if (result$success) {
+      if (nchar(result$output) > 0) {
+        elements <- append(elements, list(
+          div(class = paste("code-output-container", status_class),
+              div(class = "output-label", translate_text("Console Output", current_lang())),
+              tags$pre(result$output)
+          )
+        ))
+      } else {
+        elements <- append(elements, list(
+          div(class = paste("code-output-container", status_class),
+              div(class = "output-label", translate_text("Console Output", current_lang())),
+              tags$pre(class = "text-muted", translate_text("No output", current_lang()))
+          )
+        ))
+      }
+    } else {
+      elements <- append(elements, list(
+        div(class = paste("code-output-container", status_class),
+            div(class = "output-label", translate_text("Execution error", current_lang())),
+            tags$pre(class = "text-danger", result$error)
+        )
+      ))
+    }
+
+    # Warnings
+    if (length(result$warnings) > 0) {
+      elements <- append(elements, list(
+        div(class = "code-output-warning",
+            tags$strong(translate_text("Warnings", current_lang()), ":"),
+            tags$ul(lapply(result$warnings, function(w) tags$li(w)))
+        )
+      ))
+    }
+
+    do.call(tagList, elements)
+  })
+
+  output$has_code_output <- reactive({ has_code_output() })
+  outputOptions(output, "has_code_output", suspendWhenHidden = FALSE)
+
+  output$has_plot_output <- reactive({ has_plot_output() })
+  outputOptions(output, "has_plot_output", suspendWhenHidden = FALSE)
+
+  # Render captured plot as base64 image (webR compatible)
+  output$code_plot_output <- renderUI({
+    img_data <- plot_base64()
+    if (!is.null(img_data)) {
+      tags$img(
+        src = img_data,
+        style = "max-width: 100%; height: auto; border-radius: 4px;",
+        alt = "Generated plot"
+      )
+    }
+  })
+
+  # ---------------------------------------------------------------------------
+  # Feedback Export Handling
+  # ---------------------------------------------------------------------------
+
+  output$has_feedback <- reactive({ has_feedback() })
+  outputOptions(output, "has_feedback", suspendWhenHidden = FALSE)
+
+  # Download Markdown
+  output$download_markdown <- downloadHandler(
+    filename = function() {
+      paste0("r_feedback_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".md")
+    },
+    content = function(file) {
+      feedback <- last_feedback()
+      exercise <- last_exercise()
+      code <- last_student_code()
+
+      if (is.null(feedback)) {
+        writeLines("No feedback available.", file)
+        return()
+      }
+
+      md_content <- format_feedback_markdown(feedback, exercise, code, current_lang())
+      writeLines(md_content, file)
+    },
+    contentType = "text/markdown"
+  )
+
+  # Print as PDF (via browser)
+  observeEvent(input$print_pdf, {
+    feedback <- last_feedback()
+    if (is.null(feedback)) {
+      showNotification(translate_text("No feedback to export", current_lang()), type = "warning")
+      return()
+    }
+
+    # Generate HTML for printing
+    exercise <- last_exercise()
+    code <- last_student_code()
+    md_content <- format_feedback_markdown(feedback, exercise, code, current_lang())
+
+    # Convert to HTML
+    html_content <- markdown::markdownToHTML(
+      text = md_content,
+      fragment.only = FALSE,
+      options = c('use_xhtml', 'smartypants', 'highlight_code')
+    )
+
+    # Add print styles
+    html_content <- gsub("</head>", "
+      <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        code { background: #f5f5f5; padding: 2px 4px; }
+        @media print { body { max-width: none; } }
+      </style>
+    </head>", html_content)
+
+    # Encode for JavaScript
+    html_encoded <- jsonlite::toJSON(html_content, auto_unbox = TRUE)
+
+    # Open in new window and print
+    shinyjs::runjs(sprintf("
+      var printWindow = window.open('', '_blank');
+      printWindow.document.write(%s);
+      printWindow.document.close();
+      printWindow.onload = function() {
+        printWindow.print();
+      };
+    ", html_encoded))
+  })
+
+  # ---------------------------------------------------------------------------
+  # Diff View Handling
+  # ---------------------------------------------------------------------------
+
+  output$has_code_diff <- reactive({ has_code_diff() })
+  outputOptions(output, "has_code_diff", suspendWhenHidden = FALSE)
+
+  output$diff_display <- renderUI({
+    sugg <- suggested_code()
+    orig <- last_student_code()
+
+    if (is.null(sugg) || sugg == "" || is.null(orig) || orig == "") {
+      return(NULL)
+    }
+
+    # Compare code
+    diff_result <- compare_code(orig, sugg)
+
+    if (!diff_result$has_changes) {
+      return(NULL)
+    }
+
+    # Build diff display
+    build_diff_lines <- function(lines, label) {
+      line_elements <- lapply(seq_along(lines), function(i) {
+        line <- lines[[i]]
+        status_class <- paste0("diff-line diff-line-", line$status)
+        div(class = status_class,
+            span(class = "diff-line-number", i),
+            span(line$text)
+        )
+      })
+
+      div(class = "diff-panel",
+          div(class = "diff-panel-header", label),
+          div(class = "diff-panel-content",
+              tags$pre(do.call(tagList, line_elements))
+          )
+      )
+    }
+
+    div(class = "diff-container",
+        build_diff_lines(diff_result$original_lines, translate_text("Your Code", current_lang())),
+        build_diff_lines(diff_result$suggested_lines, translate_text("Suggested", current_lang()))
+    )
   })
 
   # ---------------------------------------------------------------------------

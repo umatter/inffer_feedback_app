@@ -245,6 +245,161 @@
       "en": "Click 'Analyze Code' to get feedback on your R code.",
       "de": "Klicken Sie auf 'Code analysieren', um Feedback zu Ihrem R-Code zu erhalten.",
       "fr": "Cliquez sur 'Analyser le Code' pour obtenir un retour sur votre code R."
+    },
+    "Custom Exercises": {
+      "en": "Custom Exercises",
+      "de": "Eigene Übungen",
+      "fr": "Exercices Personnalisés"
+    },
+    "Upload JSON": {
+      "en": "Upload JSON",
+      "de": "JSON hochladen",
+      "fr": "Télécharger JSON"
+    },
+    "Replace built-in exercises": {
+      "en": "Replace built-in exercises",
+      "de": "Eingebaute Übungen ersetzen",
+      "fr": "Remplacer les exercices intégrés"
+    },
+    "Merge with built-in exercises": {
+      "en": "Merge with built-in exercises",
+      "de": "Mit eingebauten Übungen zusammenführen",
+      "fr": "Fusionner avec les exercices intégrés"
+    },
+    "Download Template": {
+      "en": "Download Template",
+      "de": "Vorlage herunterladen",
+      "fr": "Télécharger le modèle"
+    },
+    "Apply": {
+      "en": "Apply",
+      "de": "Anwenden",
+      "fr": "Appliquer"
+    },
+    "Clear Custom": {
+      "en": "Clear Custom",
+      "de": "Eigene löschen",
+      "fr": "Effacer personnalisés"
+    },
+    "Upload custom exercises JSON file": {
+      "en": "Upload custom exercises JSON file",
+      "de": "Eigene Übungen als JSON-Datei hochladen",
+      "fr": "Télécharger un fichier JSON d'exercices personnalisés"
+    },
+    "exercises loaded successfully": {
+      "en": "exercises loaded successfully",
+      "de": "Übungen erfolgreich geladen",
+      "fr": "exercices chargés avec succès"
+    },
+    "Validation errors": {
+      "en": "Validation errors",
+      "de": "Validierungsfehler",
+      "fr": "Erreurs de validation"
+    },
+    "Custom exercises cleared": {
+      "en": "Custom exercises cleared",
+      "de": "Eigene Übungen gelöscht",
+      "fr": "Exercices personnalisés effacés"
+    },
+    "No custom exercises to apply": {
+      "en": "No custom exercises to apply",
+      "de": "Keine eigenen Übungen zum Anwenden",
+      "fr": "Aucun exercice personnalisé à appliquer"
+    },
+    "Download Markdown": {
+      "en": "Download Markdown",
+      "de": "Markdown herunterladen",
+      "fr": "Télécharger Markdown"
+    },
+    "Print as PDF": {
+      "en": "Print as PDF",
+      "de": "Als PDF drucken",
+      "fr": "Imprimer en PDF"
+    },
+    "Export Feedback": {
+      "en": "Export Feedback",
+      "de": "Feedback exportieren",
+      "fr": "Exporter le retour"
+    },
+    "No feedback to export": {
+      "en": "No feedback to export. Analyze your code first.",
+      "de": "Kein Feedback zum Exportieren. Analysieren Sie zuerst Ihren Code.",
+      "fr": "Aucun retour à exporter. Analysez d'abord votre code."
+    },
+    "Run Code": {
+      "en": "Run Code",
+      "de": "Code ausführen",
+      "fr": "Exécuter le code"
+    },
+    "Stop": {
+      "en": "Stop",
+      "de": "Stoppen",
+      "fr": "Arrêter"
+    },
+    "Code Output": {
+      "en": "Code Output",
+      "de": "Code-Ausgabe",
+      "fr": "Sortie du code"
+    },
+    "Console Output": {
+      "en": "Console Output",
+      "de": "Konsolenausgabe",
+      "fr": "Sortie Console"
+    },
+    "Plot Output": {
+      "en": "Plot Output",
+      "de": "Grafik",
+      "fr": "Graphique"
+    },
+    "Code executed successfully": {
+      "en": "Code executed successfully",
+      "de": "Code erfolgreich ausgeführt",
+      "fr": "Code exécuté avec succès"
+    },
+    "Execution error": {
+      "en": "Execution error",
+      "de": "Ausführungsfehler",
+      "fr": "Erreur d'exécution"
+    },
+    "Warnings": {
+      "en": "Warnings",
+      "de": "Warnungen",
+      "fr": "Avertissements"
+    },
+    "No output": {
+      "en": "No output",
+      "de": "Keine Ausgabe",
+      "fr": "Pas de sortie"
+    },
+    "Running code...": {
+      "en": "Running code...",
+      "de": "Code wird ausgeführt...",
+      "fr": "Exécution du code..."
+    },
+    "Suggested Code Changes": {
+      "en": "Suggested Code Changes",
+      "de": "Vorgeschlagene Codeänderungen",
+      "fr": "Modifications de code suggérées"
+    },
+    "Your Code": {
+      "en": "Your Code",
+      "de": "Dein Code",
+      "fr": "Votre code"
+    },
+    "Suggested": {
+      "en": "Suggested",
+      "de": "Vorschlag",
+      "fr": "Suggéré"
+    },
+    "Show Diff": {
+      "en": "Show Diff",
+      "de": "Unterschiede anzeigen",
+      "fr": "Afficher les différences"
+    },
+    "Hide Diff": {
+      "en": "Hide Diff",
+      "de": "Unterschiede ausblenden",
+      "fr": "Masquer les différences"
     }
   }
 }

@@ -919,3 +919,198 @@ p {
 html {
   scroll-behavior: smooth;
 }
+
+/* ============================================ */
+/* Code Output Container */
+/* ============================================ */
+
+.code-output-container {
+  background: var(--bfh-grauwert-5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.code-output-container pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  overflow-x: auto;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.code-output-container .output-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9em;
+}
+
+.code-output-container .plot-output {
+  background: white;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  margin-top: var(--spacing-md);
+}
+
+.code-output-success {
+  border-left: 4px solid var(--bfh-mittelgruen);
+}
+
+.code-output-error {
+  border-left: 4px solid var(--bfh-dunkelocker);
+}
+
+.code-output-warning {
+  background: rgba(250, 195, 0, 0.1);
+  border-left: 4px solid var(--brand-secondary);
+  padding: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  border-radius: var(--border-radius);
+}
+
+/* ============================================ */
+/* Diff View Styling */
+/* ============================================ */
+
+.diff-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .diff-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diff-panel {
+  background: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.diff-panel-header {
+  background: var(--bfh-grauwert-4);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.diff-panel-content {
+  padding: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.diff-panel-content pre {
+  margin: 0;
+  padding: 0;
+  background: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.diff-line {
+  padding: 2px var(--spacing-sm);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-line-number {
+  display: inline-block;
+  width: 2.5em;
+  color: var(--text-muted);
+  text-align: right;
+  padding-right: var(--spacing-sm);
+  user-select: none;
+  opacity: 0.6;
+}
+
+.diff-line-added {
+  background: rgba(105, 150, 115, 0.2);
+  border-left: 3px solid var(--bfh-mittelgruen);
+}
+
+.diff-line-removed {
+  background: rgba(120, 100, 80, 0.2);
+  border-left: 3px solid var(--bfh-dunkelocker);
+}
+
+.diff-line-unchanged {
+  background: transparent;
+  border-left: 3px solid transparent;
+}
+
+.diff-line-empty {
+  background: var(--bfh-grauwert-5);
+  border-left: 3px solid var(--bfh-grauwert-3);
+  min-height: 1.6em;
+}
+
+/* ============================================ */
+/* Export Buttons Styling */
+/* ============================================ */
+
+.export-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.export-buttons .btn {
+  flex: 1;
+  max-width: 200px;
+}
+
+@media (max-width: 576px) {
+  .export-buttons {
+    flex-direction: column;
+  }
+
+  .export-buttons .btn {
+    max-width: none;
+  }
+}
+
+/* ============================================ */
+/* Custom Exercise Upload Styling */
+/* ============================================ */
+
+.upload-validation-status {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+}
+
+.upload-validation-success {
+  background: rgba(105, 150, 115, 0.1);
+  border: 1px solid var(--bfh-mittelgruen);
+  color: var(--bfh-dunkelgruen);
+}
+
+.upload-validation-error {
+  background: rgba(120, 100, 80, 0.1);
+  border: 1px solid var(--bfh-dunkelocker);
+  color: var(--bfh-dunkelocker);
+}
+
+.upload-validation-error ul {
+  margin: var(--spacing-sm) 0 0 0;
+  padding-left: var(--spacing-md);
+  font-size: 0.85em;
+}

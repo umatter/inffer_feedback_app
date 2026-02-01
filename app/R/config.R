@@ -131,3 +131,31 @@ API_KEY_PATTERNS <- list(
   anthropic = "^sk-ant-",
   openrouter = "^sk-or-"
 )
+
+# =============================================================================
+# Exercise Validation Constants
+# =============================================================================
+
+# Required fields for each exercise in uploaded JSON
+EXERCISE_REQUIRED_FIELDS <- c("title", "description", "task", "category", "difficulty")
+
+# Valid category values for exercises
+VALID_CATEGORIES <- c(
+  "Data Import",
+  "Descriptive Statistics",
+  "Data Visualization",
+  "Data Manipulation",
+  "Statistical Analysis",
+  "Data Cleaning",
+  "Custom"
+)
+
+# Valid difficulty levels
+VALID_DIFFICULTIES <- c("Beginner", "Intermediate", "Advanced")
+
+# =============================================================================
+# Code Execution Constants
+# =============================================================================
+
+# Timeout for code execution in seconds
+CODE_EXECUTION_TIMEOUT_SECONDS <- 5
