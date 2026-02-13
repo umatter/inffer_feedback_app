@@ -15,6 +15,8 @@ CODE_MODEL_TEMPERATURE <- 0.5  # Lower temperature for code-focused models
 
 # UI timing
 SCROLL_TO_FEEDBACK_DELAY_MS <- 300  # Delay before scrolling to feedback
+API_FETCH_TIMEOUT_MS <- 30000       # Abort fetch after 30 seconds
+ANALYZE_COOLDOWN_MS <- 3000         # Cooldown between "Analyze Code" clicks
 
 # =============================================================================
 # Regex Patterns (pre-compiled for performance)

@@ -105,6 +105,11 @@ render_markdown_feedback <- function(markdown_text) {
 js_fetch_api <- sprintf("
 // Maximum image size constant (from R config)
 var MAX_IMAGE_SIZE = %d;
+var API_FETCH_TIMEOUT = %d;
+var ANALYZE_COOLDOWN = %d;
+
+// Cooldown state for analyze button
+var _analyzeCooldown = false;
 
 shinyjs.callLLMApi = function(paramsJson) {
   var input = Array.isArray(paramsJson) ? paramsJson[0] : paramsJson;
@@ -145,12 +150,18 @@ shinyjs.callLLMApi = function(paramsJson) {
   console.log('Headers:', safeHeaders);
   console.log('Model:', body.model);
 
+  // Abort fetch after timeout to prevent frozen tabs
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function() { controller.abort(); }, API_FETCH_TIMEOUT);
+
   fetch(url, {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: controller.signal
   })
   .then(response => {
+    clearTimeout(timeoutId);
     var statusCode = response.status;
     console.log('Response Status:', statusCode);
     if (!response.ok) {
@@ -171,16 +182,33 @@ shinyjs.callLLMApi = function(paramsJson) {
     }, {priority: 'event'});
   })
   .catch(error => {
-    console.error('API Error:', error.message);
+    clearTimeout(timeoutId);
+    var msg = error.name === 'AbortError'
+      ? 'Request timed out. The AI service may be busy — please try again.'
+      : error.message;
+    console.error('API Error:', msg);
     Shiny.setInputValue('api_response', {
       requestId: requestId,
       success: false,
-      error: error.message,
+      error: msg,
       status: error.status || null
     }, {priority: 'event'});
   });
 }
-", MAX_IMAGE_SIZE_BYTES)
+
+shinyjs.startAnalyzeCooldown = function() {
+  var btn = document.getElementById('analyze_code');
+  if (!btn || _analyzeCooldown) return;
+  _analyzeCooldown = true;
+  btn.disabled = true;
+  btn.classList.add('disabled');
+  setTimeout(function() {
+    _analyzeCooldown = false;
+    btn.disabled = false;
+    btn.classList.remove('disabled');
+  }, ANALYZE_COOLDOWN);
+}
+", MAX_IMAGE_SIZE_BYTES, API_FETCH_TIMEOUT_MS, ANALYZE_COOLDOWN_MS)
 
 # =============================================================================
 # UI Definition
@@ -190,7 +218,7 @@ ui <- function(request) {
   div(
     add_bfh_theme(),
     useShinyjs(),
-    extendShinyjs(text = js_fetch_api, functions = c("callLLMApi")),
+    extendShinyjs(text = js_fetch_api, functions = c("callLLMApi", "startAnalyzeCooldown")),
 
     page_navbar(
       title = NULL,
@@ -769,6 +797,9 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$analyze_code, {
+    # Debounce: disable button for ANALYZE_COOLDOWN_MS to prevent rapid re-clicks
+    js$startAnalyzeCooldown()
+
     if (nchar(trimws(input$student_code)) == 0) {
       output$feedback_display <- renderUI({
         div(class = "alert alert-warning",
