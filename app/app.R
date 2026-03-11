@@ -216,6 +216,7 @@ ui <- function(request) {
         title = textOutput("interactive_demo_title", inline = TRUE),
 
         layout_sidebar(
+          fillable = FALSE,
           sidebar = sidebar(
             open = "always",
             position = "left",

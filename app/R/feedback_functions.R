@@ -14,16 +14,38 @@ render_markdown_feedback <- function(markdown_text) {
     return("")
   }
 
-  # Convert markdown to HTML
-  html_content <- markdown::markdownToHTML(
-    text = markdown_text,
-    fragment.only = TRUE,
-    options = c('use_xhtml', 'smartypants', 'base64_images', 'mathjax', 'highlight_code')
-  )
+  # Fix unclosed code fences/backticks that can break markdown parsing
+  # Close unclosed fenced code blocks (```) first
+  fence_matches <- gregexpr("```", markdown_text, fixed = TRUE)[[1]]
+  fence_count <- if (fence_matches[1] == -1) 0L else length(fence_matches)
+  if (fence_count %% 2 != 0) {
+    markdown_text <- paste0(markdown_text, "\n```")
+  }
+  # Then fix unclosed inline backticks
+  # Strip fenced blocks (``` ... ```) before counting to avoid false positives
+  inline_text <- gsub("(?s)```.*?```", "", markdown_text, perl = TRUE)
+  single_bt <- gregexpr("`", inline_text, fixed = TRUE)[[1]]
+  single_count <- if (single_bt[1] == -1) 0L else length(single_bt)
+  if (single_count %% 2 != 0) {
+    markdown_text <- paste0(markdown_text, "`")
+  }
+
+  # Convert markdown to HTML with fallback to plain text on error
+  html_content <- tryCatch({
+    markdown::markdownToHTML(
+      text = markdown_text,
+      fragment.only = TRUE,
+      options = c('use_xhtml', 'base64_images', 'mathjax', 'highlight_code')
+    )
+  }, error = function(e) {
+    # Fallback: escape HTML entities and preserve line breaks
+    escaped <- gsub("&", "&amp;", markdown_text)
+    escaped <- gsub("<", "&lt;", escaped)
+    escaped <- gsub(">", "&gt;", escaped)
+    gsub("\n", "<br/>", escaped)
+  })
 
   # Basic HTML sanitization - remove potentially dangerous tags
-  # Note: markdownToHTML with fragment.only=TRUE is relatively safe,
-  # but we add extra protection for AI-generated content
   html_content <- gsub("<script[^>]*>.*?</script>", "", html_content, ignore.case = TRUE, perl = TRUE)
   html_content <- gsub("<iframe[^>]*>.*?</iframe>", "", html_content, ignore.case = TRUE, perl = TRUE)
   html_content <- gsub("on\\w+\\s*=", "data-removed=", html_content, ignore.case = TRUE)
