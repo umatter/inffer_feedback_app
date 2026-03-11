@@ -2,6 +2,39 @@
 # Contains syntax checking, rule-based analysis, and feedback UI generation
 
 # =============================================================================
+# Markdown Rendering
+# =============================================================================
+
+#' Render markdown to sanitized HTML
+#'
+#' @param markdown_text Markdown text to render
+#' @return HTML content wrapped in styled container
+render_markdown_feedback <- function(markdown_text) {
+  if (is.null(markdown_text) || markdown_text == "") {
+    return("")
+  }
+
+  # Convert markdown to HTML
+  html_content <- markdown::markdownToHTML(
+    text = markdown_text,
+    fragment.only = TRUE,
+    options = c('use_xhtml', 'smartypants', 'base64_images', 'mathjax', 'highlight_code')
+  )
+
+  # Basic HTML sanitization - remove potentially dangerous tags
+  # Note: markdownToHTML with fragment.only=TRUE is relatively safe,
+  # but we add extra protection for AI-generated content
+  html_content <- gsub("<script[^>]*>.*?</script>", "", html_content, ignore.case = TRUE, perl = TRUE)
+  html_content <- gsub("<iframe[^>]*>.*?</iframe>", "", html_content, ignore.case = TRUE, perl = TRUE)
+  html_content <- gsub("on\\w+\\s*=", "data-removed=", html_content, ignore.case = TRUE)
+
+  # Wrap in styled container
+  styled_html <- paste0('<div class="markdown-content">', html_content, '</div>')
+
+  return(HTML(styled_html))
+}
+
+# =============================================================================
 # Syntax Checking
 # =============================================================================
 
